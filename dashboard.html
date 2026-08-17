@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintKero | Shop Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></link>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-700 text-white p-4 shadow-lg flex justify-between items-center">
+        <h1 class="text-2xl font-black tracking-tighter">Print<span class="text-blue-200">Kero</span> <span class="text-xs font-medium text-blue-100 ml-2 uppercase tracking-widest">Dashboard</span></h1>
+        <div class="flex items-center gap-4">
+            <button onclick="toggleQRModal()" class="text-sm font-bold flex items-center gap-2 hover:text-blue-200 transition"><i class="fas fa-qrcode"></i> QR</button>
+            <button onclick="logoutShop()" class="bg-red-500 hover:bg-red-600 px-4 py-1.5 rounded-lg text-xs font-bold transition">LOGOUT</button>
+        </div>
+    </nav>
+
+    <!-- QR Modal -->
+    <div id="qrModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center relative shadow-2xl">
+            <button onclick="toggleQRModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+            <h3 class="text-lg font-bold mb-6">Shop QR Code</h3>
+            <div id="qrcode" class="flex justify-center mb-6"></div>
+            <button onclick="printQR()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">Print Counter QR</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-bold text-lg"><i class="fas fa-hourglass-half text-amber-500 mr-2"></i> Pending Prints</h2>
+                <span id="fileCount" class="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">0 Files</span>
+            </div>
+            <div id="pendingList" class="space-y-4"></div>
+        </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+            <h2 class="font-bold text-lg mb-6"><i class="fas fa-check-circle text-emerald-500 mr-2"></i> Printed History</h2>
+            <div id="printedList" class="space-y-3"></div>
+        </div>
+    </main>
+
+    <!-- Professional Collapsible Footer -->
+    <footer class="mt-auto bg-white border-t border-slate-200">
+        <div class="max-w-4xl mx-auto p-6 text-center">
+
+            <!-- Google AdSense Dashboard Banner Space -->
+            <div class="mb-6 bg-slate-100 border border-slate-200 rounded-2xl p-4 text-slate-400 text-xs font-semibold shadow-inner">
+                [ Google AdSense Dashboard Banner Ad ]
+            </div>
+
+            <button onclick="document.getElementById('contactPanel').classList.toggle('hidden')" class="w-full text-sm font-bold text-slate-500 hover:text-blue-600 transition flex justify-center items-center gap-2">
+                CONTACT DEVELOPER <i class="fas fa-chevron-down"></i>
+            </button>
+            <div id="contactPanel" class="hidden mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <a href="https://www.linkedin.com/in/raushanabhishek" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 transition text-blue-600">
+                    <i class="fab fa-linkedin text-2xl mb-2"></i><p class="text-xs font-bold">LINKEDIN</p>
+                </a>
+                <a href="https://wa.me/919508969439" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-emerald-50 transition text-emerald-600">
+                    <i class="fab fa-whatsapp text-2xl mb-2"></i><p class="text-xs font-bold">WHATSAPP</p>
+                </a>
+                <a href="mailto:raushanabhishek95089@gmail.com" class="p-4 bg-slate-50 rounded-2xl hover:bg-red-50 transition text-red-600">
+                    <i class="fas fa-envelope text-2xl mb-2"></i><p class="text-xs font-bold">EMAIL</p>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let shopSlug = new URLSearchParams(window.location.search).get('shop') || localStorage.getItem('shopSlug');
+        if (!shopSlug) window.location.href = 'auth.html';
+
+        const customerLink = window.location.origin + window.location.pathname.replace('dashboard.html', 'index.html') + '?shop=' + shopSlug;
+        let qrGenerated = false;
+        function toggleQRModal() {
+            const modal = document.getElementById('qrModal');
+            modal.classList.toggle('hidden');
+            if(!qrGenerated && !modal.classList.contains('hidden')) { new QRCode(document.getElementById("qrcode"), { text: customerLink, width: 150, height: 150 }); qrGenerated = true; }
+        }
+
+        function printQR() {
+            const qrWindow = window.open('', '_blank', 'width=800,height=800');
+            qrWindow.document.write(
+                '<html>' +
+                '<head>' +
+                '<title>PrintKero - Shop QR Code</title>' +
+                '<style>' +
+                'body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; background: #fff; }' +
+                '.container { text-align: center; padding: 40px; border: 4px dashed #2563eb; border-radius: 24px; background: #f8fafc; }' +
+                'h2 { color: #1e293b; font-size: 28px; margin-bottom: 20px; }' +
+                '#qrcode { display: inline-block; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; }' +
+                '#qrcode img { display: block; width: 220px !important; height: 220px !important; }' +
+                'p { font-size: 20px; font-weight: bold; color: #2563eb; margin-top: 15px; }' +
+                '</style>' +
+                '</head>' +
+                '<body>' +
+                '<div class="container">' +
+                '<h2>Scan to Upload & Print File</h2>' +
+                '<div id="qrcode">' + document.getElementById('qrcode').innerHTML + '</div>' +
+                '<p>PrintKero Instant Printing</p>' +
+                '</div>' +
+                '<script>window.onload = function() { window.focus(); window.print(); }<\/script>' +
+                '</body>' +
+                '</html>'
+            );
+            qrWindow.document.close();
+        }
+
+        async function markAsPrinted(id, fileUrl) {
+            const isPdf = fileUrl.toLowerCase().includes('.pdf') || fileUrl.toLowerCase().includes('pdf');
+
+            // 1. Pehle file ko naye tab mein khol kar print hone do
+            if (isPdf) {
+                window.open(fileUrl, '_blank');
+            } else {
+                const printWindow = window.open('', '_blank', 'width=900,height=800');
+                if (printWindow) {
+                    printWindow.document.write(
+                        '<html><head><title>Print Image Document</title><style>body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; } img { max-width: 100%; max-height: 100%; object-fit: contain; }</style></head>' +
+                        '<body><img src="' + fileUrl + '" onload="window.focus(); window.print();" /></body></html>'
+                    );
+                    printWindow.document.close();
+                }
+            }
+
+            // 2. Database status update karein (History mein bhejne ke liye)
+            const { error } = await supabaseClient
+                .from('print_jobs')
+                .update({
+                    status: 'printed',
+                    printed_at: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (!error) {
+                fetchPrintJobs();
+            }
+
+            // 3. 5 seconds ke delay ke baad bucket se delete ho (taaki print khulne mein error na aaye)
+            setTimeout(async () => {
+                try {
+                    const urlObj = new URL(fileUrl);
+                    const pathSegments = urlObj.pathname.split('/print_files/');
+                    if (pathSegments.length > 1) {
+                        const filePath = decodeURIComponent(pathSegments[1]);
+                        await supabaseClient.storage.from('print_files').remove([filePath]);
+                    }
+                } catch (err) {
+                    console.error("Delayed delete exception:", err);
+                }
+            }, 5000);
+        }
+
+        async function autoCleanOldPrintedJobs() {
+            try {
+                const fiveMinutesAgo = new Date(new Date().getTime() - 5 * 60 * 1000).toISOString();
+                await supabaseClient
+                    .from('print_jobs')
+                    .delete()
+                    .eq('shop_slug', shopSlug)
+                    .eq('status', 'printed')
+                    .lt('printed_at', fiveMinutesAgo);
+            } catch (e) {
+                console.error("Auto clean error:", e);
+            }
+        }
+
+        async function fetchPrintJobs() {
+            await autoCleanOldPrintedJobs();
+
+            const { data } = await supabaseClient.from('print_jobs').select('*').eq('shop_slug', shopSlug).order('id', { ascending: false });
+            const pList = document.getElementById('pendingList'), hList = document.getElementById('printedList');
+            pList.innerHTML = ""; hList.innerHTML = "";
+
+            if(data) {
+                data.forEach(j => {
+                    if(j.status !== 'printed') {
+                        pList.innerHTML += '<div class="flex justify-between items-center p-4 bg-slate-50 rounded-xl"><div><span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">TOKEN ' + j.token_number + '</span><p class="font-bold text-sm mt-1">' + j.file_name.substring(14) + '</p></div><button onclick="markAsPrinted(' + j.id + ', \'' + j.file_url + '\')" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold">PRINT</button></div>';
+                    } else {
+                        hList.innerHTML += '<div class="text-xs p-3 bg-emerald-50 text-emerald-800 rounded-lg flex justify-between items-center"><span>' + j.file_name.substring(14) + '</span><span class="font-bold text-[10px] bg-emerald-200 px-2 py-0.5 rounded">Auto-delete in 5m</span></div>';
+                    }
+                });
+                document.getElementById('fileCount').innerText = data.filter(j => j.status !== 'printed').length + ' Files';
+            }
+        }
+
+        function logoutShop() { localStorage.clear(); window.location.href = 'auth.html'; }
+        fetchPrintJobs(); setInterval(fetchPrintJobs, 5000);
+    </script>
+</body>
+</html>

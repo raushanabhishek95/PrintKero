@@ -89,15 +89,25 @@
         const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let shopSlug = new URLSearchParams(window.location.search).get('shop') || localStorage.getItem('shopSlug');
+
+        // FIXED: Generate customer upload link correctly pointing to index.html with shop slug
+        const urlParams = new URLSearchParams(window.location.search);
+        let shopSlug = urlParams.get('shop') || localStorage.getItem('shopSlug');
         if (!shopSlug) window.location.href = 'auth.html';
 
-        const customerLink = window.location.origin + window.location.pathname.replace('dashboard.html', 'index.html') + '?shop=' + shopSlug;
+        // Ensure customer link explicitly points to index.html with the shop parameter
+        const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        const customerLink = baseUrl + 'index.html?shop=' + shopSlug;
+
         let qrGenerated = false;
         function toggleQRModal() {
             const modal = document.getElementById('qrModal');
             modal.classList.toggle('hidden');
-            if(!qrGenerated && !modal.classList.contains('hidden')) { new QRCode(document.getElementById("qrcode"), { text: customerLink, width: 150, height: 150 }); qrGenerated = true; }
+            if(!qrGenerated && !modal.classList.contains('hidden')) {
+                document.getElementById("qrcode").innerHTML = ""; // Clear previous QR if any
+                new QRCode(document.getElementById("qrcode"), { text: customerLink, width: 150, height: 150 });
+                qrGenerated = true;
+            }
         }
 
         function printQR() {
@@ -131,7 +141,6 @@
         async function markAsPrinted(id, fileUrl) {
             const isPdf = fileUrl.toLowerCase().includes('.pdf') || fileUrl.toLowerCase().includes('pdf');
 
-            // 1. Pehle file ko naye tab mein khol kar print hone do
             if (isPdf) {
                 window.open(fileUrl, '_blank');
             } else {
@@ -145,7 +154,6 @@
                 }
             }
 
-            // 2. Database status update karein (History mein bhejne ke liye)
             const { error } = await supabaseClient
                 .from('print_jobs')
                 .update({
@@ -158,7 +166,6 @@
                 fetchPrintJobs();
             }
 
-            // 3. 5 seconds ke delay ke baad bucket se delete ho (taaki print khulne mein error na aaye)
             setTimeout(async () => {
                 try {
                     const urlObj = new URL(fileUrl);

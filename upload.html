@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintKero | Upload & Print</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800">
+
+    <!-- Main Upload Section -->
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border-t-8 border-blue-600">
+            <h1 class="text-4xl font-black tracking-tighter text-slate-900 mb-2">Print<span class="text-blue-600">Kero</span></h1>
+            <p id="shopSubTitle" class="text-slate-500 mb-8 text-sm font-medium">Fast, secure, and instant wireless printing.</p>
+
+            <!-- Upload Box (Added 'multiple' attribute here) -->
+            <div id="uploadUI">
+                <input type="file" id="fileInput" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-blue-300 rounded-2xl p-8 hover:bg-blue-50/50 cursor-pointer transition group">
+                    <i class="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-3 group-hover:scale-110 transition"></i>
+                    <h3 id="fileLabel" class="text-base font-bold text-slate-700">Tap to Select Files (Multiple allowed)</h3>
+                    <p class="text-xs text-slate-400 mt-1">Supports PDF, JPG, PNG</p>
+                </div>
+                <button id="uploadBtn" onclick="uploadFiles()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition">Upload & Get Token</button>
+            </div>
+
+            <!-- Token Display Area (Success State) -->
+            <div id="tokenDisplay" class="hidden mt-4">
+                <div class="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                    <p class="text-emerald-800 font-bold text-xs uppercase tracking-wider">Your Print Token</p>
+                    <h2 id="tokenNumber" class="text-5xl font-black text-emerald-600 my-3">--</h2>
+                    <p class="text-xs text-emerald-700 font-medium">Show this token at the counter</p>
+                </div>
+
+                <!-- High-Attention Ad Banner Space for Token Success View -->
+                <div class="my-4 bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-400 text-xs font-semibold">
+                    [ Token Page Ad Banner Space ]
+                </div>
+
+                <button onclick="resetUpload()" class="mt-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">
+                    <i class="fas fa-redo mr-2"></i> Upload Another File
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Professional Collapsible Footer with General Ad Banner -->
+    <footer class="mt-auto bg-white border-t border-slate-200">
+        <div class="max-w-4xl mx-auto p-6 text-center">
+
+            <!-- Footer General Ad Banner Space -->
+            <div class="mb-6 bg-slate-100 border border-slate-200 rounded-2xl p-4 text-slate-400 text-xs font-semibold">
+                [ Footer Ad Banner Space ]
+            </div>
+
+            <button onclick="document.getElementById('contactPanel').classList.toggle('hidden')" class="text-xs font-bold text-slate-500 hover:text-blue-600 transition flex justify-center items-center gap-2 mx-auto">
+                CONTACT DEVELOPER <i class="fas fa-chevron-down"></i>
+            </button>
+            <div id="contactPanel" class="hidden mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <a href="https://www.linkedin.com/in/raushanabhishek" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 transition text-blue-600">
+                    <i class="fab fa-linkedin text-2xl mb-2"></i><p class="text-xs font-bold">LINKEDIN</p>
+                </a>
+                <a href="https://wa.me/919508969439" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-emerald-50 transition text-emerald-600">
+                    <i class="fab fa-whatsapp text-2xl mb-2"></i><p class="text-xs font-bold">WHATSAPP</p>
+                </a>
+                <a href="mailto:raushanabhishek95089@gmail.com" class="p-4 bg-slate-50 rounded-2xl hover:bg-red-50 transition text-red-600">
+                    <i class="fas fa-envelope text-2xl mb-2"></i><p class="text-xs font-bold">EMAIL</p>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Customer Upload Logic (Updated for Multiple Files) -->
+    <script>
+        const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const shopSlug = urlParams.get('shop');
+
+        if (!shopSlug) {
+            alert("Invalid shop link! Please scan a valid shop QR code.");
+        } else {
+            document.getElementById('shopSubTitle').innerText = `Printing for Shop: ${shopSlug.split('_')[0].toUpperCase()}`;
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if(files.length > 0) {
+                if(files.length === 1) {
+                    document.getElementById('fileLabel').innerText = files[0].name;
+                } else {
+                    document.getElementById('fileLabel').innerText = `${files.length} files selected`;
+                }
+                document.getElementById('fileLabel').classList.add('text-blue-600');
+            }
+        });
+
+        function resetUpload() {
+            document.getElementById('fileInput').value = "";
+            document.getElementById('tokenDisplay').classList.add('hidden');
+            document.getElementById('uploadUI').classList.remove('hidden');
+            document.getElementById('fileLabel').innerText = "Tap to Select Files (Multiple allowed)";
+            document.getElementById('fileLabel').classList.remove('text-blue-600');
+            document.getElementById('uploadBtn').disabled = false;
+            document.getElementById('uploadBtn').innerText = "Upload & Get Token";
+        }
+
+        async function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            if (!shopSlug) return alert("Invalid shop reference!");
+            if (!fileInput.files || fileInput.files.length === 0) return alert("Please select at least one file first!");
+
+            const btn = document.getElementById('uploadBtn');
+            btn.innerText = "Uploading files...";
+            btn.disabled = true;
+
+            try {
+                const token = "#" + Math.floor(1000 + Math.random() * 9000);
+                const files = fileInput.files;
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileName = Date.now() + "_" + file.name;
+
+                    await supabaseClient.storage.from('print_files').upload(fileName, file);
+                    const { data: urlData } = supabaseClient.storage.from('print_files').getPublicUrl(fileName);
+
+                    await supabaseClient.from('print_jobs').insert([{
+                        token_number: token,
+                        file_name: fileName,
+                        file_url: urlData.publicUrl,
+                        shop_slug: shopSlug
+                    }]);
+                }
+
+                document.getElementById('uploadUI').classList.add('hidden');
+                document.getElementById('tokenDisplay').classList.remove('hidden');
+                document.getElementById('tokenNumber').innerText = token;
+            } catch (err) {
+                alert("Upload failed! Please try again. Error: " + err.message);
+                btn.innerText = "Upload & Get Token";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

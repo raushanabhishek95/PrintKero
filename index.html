@@ -130,7 +130,10 @@
 
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
-                    const fileName = Date.now() + "_" + file.name;
+
+                    // FIXED: Clean file name to prevent space/special character storage issues
+                    const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+                    const fileName = Date.now() + "_" + cleanName;
 
                     await supabaseClient.storage.from('print_files').upload(fileName, file);
                     const { data: urlData } = supabaseClient.storage.from('print_files').getPublicUrl(fileName);

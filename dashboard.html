@@ -90,12 +90,10 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // FIXED: Generate customer upload link correctly pointing to index.html with shop slug
         const urlParams = new URLSearchParams(window.location.search);
         let shopSlug = urlParams.get('shop') || localStorage.getItem('shopSlug');
         if (!shopSlug) window.location.href = 'auth.html';
 
-        // Ensure customer link explicitly points to index.html with the shop parameter
         const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const customerLink = baseUrl + 'index.html?shop=' + shopSlug;
 
@@ -104,7 +102,7 @@
             const modal = document.getElementById('qrModal');
             modal.classList.toggle('hidden');
             if(!qrGenerated && !modal.classList.contains('hidden')) {
-                document.getElementById("qrcode").innerHTML = ""; // Clear previous QR if any
+                document.getElementById("qrcode").innerHTML = "";
                 new QRCode(document.getElementById("qrcode"), { text: customerLink, width: 150, height: 150 });
                 qrGenerated = true;
             }
@@ -142,7 +140,15 @@
             const isPdf = fileUrl.toLowerCase().includes('.pdf') || fileUrl.toLowerCase().includes('pdf');
 
             if (isPdf) {
-                window.open(fileUrl, '_blank');
+                // FIXED: Embed PDF inside an iframe in a new print window to avoid direct load error
+                const printWindow = window.open('', '_blank', 'width=900,height=800');
+                if (printWindow) {
+                    printWindow.document.write(
+                        '<html><head><title>Print PDF Document</title><style>body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }</style></head>' +
+                        '<body><iframe src="' + fileUrl + '" style="width:100%; height:100%; border:none;"></iframe></body></html>'
+                    );
+                    printWindow.document.close();
+                }
             } else {
                 const printWindow = window.open('', '_blank', 'width=900,height=800');
                 if (printWindow) {

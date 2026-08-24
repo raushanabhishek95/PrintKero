@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
+    <!-- Auto-Login Check (Sabse pehle run hoga taaki flicker na ho) -->
+    <script>
+        const savedShopSlug = localStorage.getItem('shopSlug');
+        if (savedShopSlug) {
+            window.location.replace('dashboard.html?shop=' + savedShopSlug);
+        }
+    </script>
+
     <link rel="manifest" href="/manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

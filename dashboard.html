@@ -213,46 +213,35 @@
             }
         }
 
-        // Global map to store token jobs safely without HTML string corruption
-        let activeTokenGroups = {};
+        async function markAsPrinted(id, fileUrl, isOneView) {
+            openFileForPrint(fileUrl);
 
-        async function markTokenAsPrinted(tokenNumber) {
-            const jobs = activeTokenGroups[tokenNumber];
-            if (!jobs || jobs.length === 0) return;
+            const { error } = await supabaseClient
+                .from('print_jobs')
+                .update({
+                    status: 'printed',
+                    printed_at: new Date().toISOString()
+                })
+                .eq('id', id);
 
-            // Open files with staggered delay to bypass browser pop-up blockers
-            jobs.forEach((j, index) => {
-                setTimeout(() => {
-                    openFileForPrint(j.file_url);
-                }, index * 400);
-            });
-
-            for (let j of jobs) {
-                await supabaseClient
-                    .from('print_jobs')
-                    .update({
-                        status: 'printed',
-                        printed_at: new Date().toISOString()
-                    })
-                    .eq('id', j.id);
-
-                if (j.is_one_view) {
-                    setTimeout(async () => {
-                        try {
-                            const urlObj = new URL(j.file_url);
-                            const pathSegments = urlObj.pathname.split('/print_files/');
-                            if (pathSegments.length > 1) {
-                                const filePath = decodeURIComponent(pathSegments[1]);
-                                await supabaseClient.storage.from('print_files').remove([filePath]);
-                            }
-                        } catch (err) {
-                            console.error("Delayed delete exception:", err);
-                        }
-                    }, 5000);
-                }
+            if (!error) {
+                fetchPrintJobs();
             }
 
-            fetchPrintJobs();
+            if (isOneView) {
+                setTimeout(async () => {
+                    try {
+                        const urlObj = new URL(fileUrl);
+                        const pathSegments = urlObj.pathname.split('/print_files/');
+                        if (pathSegments.length > 1) {
+                            const filePath = decodeURIComponent(pathSegments[1]);
+                            await supabaseClient.storage.from('print_files').remove([filePath]);
+                        }
+                    } catch (err) {
+                        console.error("Delayed delete exception:", err);
+                    }
+                }, 5000);
+            }
         }
 
         async function autoCleanOldPrintedJobs() {
@@ -288,13 +277,8 @@
                     tokenGroups[j.token_number].push(j);
                 });
 
-                // Clear previous map and repopulate
-                activeTokenGroups = {};
-
                 Object.keys(tokenGroups).forEach(token => {
                     const groupJobs = tokenGroups[token];
-                    activeTokenGroups[token] = groupJobs;
-
                     let groupTotalPrice = 0;
                     let groupTotalPages = 0;
                     let fileItemsHtml = "";
@@ -305,12 +289,12 @@
                         const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';
                         const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
 
-                        fileItemsHtml += `<div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-none">
+                        fileItemsHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-none gap-2">
                             <div class="truncate pr-2">
                                 <p class="font-bold text-xs text-slate-700 truncate">${j.file_name.substring(14)}</p>
-                                <div class="flex items-center gap-1 mt-0.5">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">• ${j.total_pages || 1} Pages</span></div>
+                                <div class="flex items-center gap-1 mt-0.5">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">• ${j.total_pages || 1} Pages (₹${(j.total_price || 0).toFixed(2)})</span></div>
                             </div>
-                            <span class="text-xs font-bold text-emerald-600 whitespace-nowrap">₹${(j.total_price || 0).toFixed(2)}</span>
+                            <button onclick="markAsPrinted(${j.id}, '${j.file_url}', ${j.is_one_view})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition shadow-sm">PRINT</button>
                         </div>`;
                     });
 
@@ -323,9 +307,6 @@
                             </div>
                         </div>
                         <div class="space-y-1">${fileItemsHtml}</div>
-                        <button onclick="markTokenAsPrinted('${token}')" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition flex justify-center items-center gap-2">
-                            <i class="fas fa-print"></i> <span>PRINT ALL (${groupJobs.length})</span>
-                        </button>
                     </div>`;
                 });
 

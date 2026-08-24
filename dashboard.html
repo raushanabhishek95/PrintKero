@@ -266,6 +266,17 @@
             pList.innerHTML = ""; hList.innerHTML = "";
 
             if(data) {
+                // Keep all jobs (both pending and printed) to calculate the permanent original token total bill
+                const tokenTotals = {};
+                data.forEach(j => {
+                    if (!tokenTotals[j.token_number]) {
+                        tokenTotals[j.token_number] = { totalAmount: 0, totalFiles: 0, totalPages: 0 };
+                    }
+                    tokenTotals[j.token_number].totalAmount += (j.total_price || 0);
+                    tokenTotals[j.token_number].totalFiles += 1;
+                    tokenTotals[j.token_number].totalPages += (j.total_pages || 1);
+                });
+
                 const pendingJobs = data.filter(j => j.status !== 'printed');
                 const printedJobs = data.filter(j => j.status === 'printed');
 
@@ -277,15 +288,15 @@
                     tokenGroups[j.token_number].push(j);
                 });
 
+                // Render Token Cards with fixed original total amount
                 Object.keys(tokenGroups).forEach(token => {
                     const groupJobs = tokenGroups[token];
-                    let groupTotalPrice = 0;
-                    let groupTotalPages = 0;
+                    const fixedTotalAmount = tokenTotals[token].totalAmount; // Locked original sum (e.g., ₹13.50)
+                    const totalFilesCount = tokenTotals[token].totalFiles;
+                    const totalPagesCount = tokenTotals[token].totalPages;
                     let fileItemsHtml = "";
 
                     groupJobs.forEach(j => {
-                        groupTotalPrice += (j.total_price || 0);
-                        groupTotalPages += (j.total_pages || 1);
                         const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';
                         const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
 
@@ -302,14 +313,15 @@
                         <div class="flex justify-between items-center pb-2 border-b border-slate-200">
                             <span class="text-xs font-black bg-blue-600 text-white px-2.5 py-1 rounded-lg">TOKEN ${token}</span>
                             <div class="text-right">
-                                <span class="text-xs font-bold text-slate-500 block">${groupJobs.length} Files (${groupTotalPages} Pages)</span>
-                                <span class="text-sm font-black text-emerald-600">Total: ₹${groupTotalPrice.toFixed(2)}</span>
+                                <span class="text-xs font-bold text-slate-500 block">${totalFilesCount} Files (${totalPagesCount} Pages)</span>
+                                <span class="text-sm font-black text-emerald-600">Total Bill: ₹${fixedTotalAmount.toFixed(2)}</span>
                             </div>
                         </div>
                         <div class="space-y-1">${fileItemsHtml}</div>
                     </div>`;
                 });
 
+                // Render Printed History Items
                 printedJobs.forEach(j => {
                     const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
                     const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';

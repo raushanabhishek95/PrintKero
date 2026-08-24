@@ -16,7 +16,7 @@
             <h1 class="text-4xl font-black tracking-tighter text-slate-900 mb-2">Print<span class="text-blue-600">Kero</span></h1>
             <p id="shopSubTitle" class="text-slate-500 mb-8 text-sm font-medium">Fast, secure, and instant wireless printing.</p>
 
-            <!-- Upload Box (Added 'multiple' attribute here) -->
+            <!-- Upload Box -->
             <div id="uploadUI">
                 <input type="file" id="fileInput" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple>
                 <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-blue-300 rounded-2xl p-8 hover:bg-blue-50/50 cursor-pointer transition group">
@@ -24,7 +24,17 @@
                     <h3 id="fileLabel" class="text-base font-bold text-slate-700">Tap to Select Files (Multiple allowed)</h3>
                     <p class="text-xs text-slate-400 mt-1">Supports PDF, JPG, PNG</p>
                 </div>
-                <button id="uploadBtn" onclick="uploadFiles()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition">Upload & Get Token</button>
+
+                <!-- One View Checkbox Option -->
+                <div class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 text-left">
+                    <input type="checkbox" id="oneViewCheck" class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                    <label for="oneViewCheck" class="text-xs text-slate-700 cursor-pointer select-none">
+                        <span class="font-bold block text-slate-900"><i class="fas fa-eye-slash text-blue-500 mr-1"></i> Send as "One View"</span>
+                        Deletes automatically after single print session. Leave unchecked for multi-print support.
+                    </label>
+                </div>
+
+                <button id="uploadBtn" onclick="uploadFiles()" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition">Upload & Get Token</button>
             </div>
 
             <!-- Token Display Area (Success State) -->
@@ -35,7 +45,7 @@
                     <p class="text-xs text-emerald-700 font-medium">Show this token at the counter</p>
                 </div>
 
-                <!-- Adsterra Banner 300x250 Integrated Here (UPDATED NEW CODE) -->
+                <!-- Adsterra Banner 300x250 Integrated Here -->
                 <div class="my-4 flex justify-center">
                     <script type="text/javascript">
                         atOptions = {
@@ -59,8 +69,6 @@
     <!-- Professional Collapsible Footer -->
     <footer class="mt-auto bg-white border-t border-slate-200">
         <div class="max-w-4xl mx-auto p-6 text-center">
-
-            <!-- Optional secondary layout spacing if needed -->
             <button onclick="document.getElementById('contactPanel').classList.toggle('hidden')" class="text-xs font-bold text-slate-500 hover:text-blue-600 transition flex justify-center items-center gap-2 mx-auto">
                 CONTACT DEVELOPER <i class="fas fa-chevron-down"></i>
             </button>
@@ -78,7 +86,7 @@
         </div>
     </footer>
 
-    <!-- Customer Upload Logic (Updated for Multiple Files) -->
+    <!-- Customer Upload Logic -->
     <script>
         const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
@@ -107,6 +115,7 @@
 
         function resetUpload() {
             document.getElementById('fileInput').value = "";
+            document.getElementById('oneViewCheck').checked = false;
             document.getElementById('tokenDisplay').classList.add('hidden');
             document.getElementById('uploadUI').classList.remove('hidden');
             document.getElementById('fileLabel').innerText = "Tap to Select Files (Multiple allowed)";
@@ -117,6 +126,8 @@
 
         async function uploadFiles() {
             const fileInput = document.getElementById('fileInput');
+            const isOneView = document.getElementById('oneViewCheck').checked;
+
             if (!shopSlug) return alert("Invalid shop reference!");
             if (!fileInput.files || fileInput.files.length === 0) return alert("Please select at least one file first!");
 
@@ -130,8 +141,6 @@
 
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
-
-                    // FIXED: Clean file name to prevent space/special character storage issues
                     const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
                     const fileName = Date.now() + "_" + cleanName;
 
@@ -142,7 +151,8 @@
                         token_number: token,
                         file_name: fileName,
                         file_url: urlData.publicUrl,
-                        shop_slug: shopSlug
+                        shop_slug: shopSlug,
+                        is_one_view: isOneView
                     }]);
                 }
 
@@ -157,7 +167,7 @@
         }
     </script>
 
-    <!-- Adsterra Social Bar Ad Integrated Here (UPDATED NEW CODE) -->
+    <!-- Adsterra Social Bar Ad Integrated Here -->
     <script src="https://pl30904930.effectivecpmnetwork.com/fb/6a/14/fb6a14a37de6d2414bb8f16687ee901c.js"></script>
 </body>
 </html>

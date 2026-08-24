@@ -52,8 +52,6 @@
     <!-- Professional Collapsible Footer -->
     <footer class="mt-auto bg-white border-t border-slate-200">
         <div class="max-w-4xl mx-auto p-6 text-center">
-
-            <!-- Adsterra Dashboard Banner Ad Remains Untouched -->
             <div class="mb-6 flex justify-center">
                 <script type="text/javascript">
                     atOptions = {
@@ -136,30 +134,30 @@
             qrWindow.document.close();
         }
 
-        async function markAsPrinted(id, fileUrl) {
+        function openFileForPrint(fileUrl) {
             const isPdf = fileUrl.toLowerCase().includes('.pdf') || fileUrl.toLowerCase().includes('pdf');
-
-            if (isPdf) {
-                // FIXED: Embed PDF inside an iframe in a new print window to avoid direct load error
-                const printWindow = window.open('', '_blank', 'width=900,height=800');
-                if (printWindow) {
+            const printWindow = window.open('', '_blank', 'width=900,height=800');
+            if (printWindow) {
+                if (isPdf) {
                     printWindow.document.write(
                         '<html><head><title>Print PDF Document</title><style>body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }</style></head>' +
                         '<body><iframe src="' + fileUrl + '" style="width:100%; height:100%; border:none;"></iframe></body></html>'
                     );
-                    printWindow.document.close();
-                }
-            } else {
-                const printWindow = window.open('', '_blank', 'width=900,height=800');
-                if (printWindow) {
+                } else {
                     printWindow.document.write(
                         '<html><head><title>Print Image Document</title><style>body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; } img { max-width: 100%; max-height: 100%; object-fit: contain; }</style></head>' +
                         '<body><img src="' + fileUrl + '" onload="window.focus(); window.print();" /></body></html>'
                     );
-                    printWindow.document.close();
                 }
+                printWindow.document.close();
             }
+        }
 
+        async function markAsPrinted(id, fileUrl, isOneView) {
+            // Pehle file print window mein khol do
+            openFileForPrint(fileUrl);
+
+            // Ab chahe One View ho ya Normal, status ko 'printed' kar denge taaki queue clean rahe
             const { error } = await supabaseClient
                 .from('print_jobs')
                 .update({
@@ -172,18 +170,21 @@
                 fetchPrintJobs();
             }
 
-            setTimeout(async () => {
-                try {
-                    const urlObj = new URL(fileUrl);
-                    const pathSegments = urlObj.pathname.split('/print_files/');
-                    if (pathSegments.length > 1) {
-                        const filePath = decodeURIComponent(pathSegments[1]);
-                        await supabaseClient.storage.from('print_files').remove([filePath]);
+            // Agar One View hai, toh storage se bhi file delete ho jayegi 5 sec baad
+            if (isOneView) {
+                setTimeout(async () => {
+                    try {
+                        const urlObj = new URL(fileUrl);
+                        const pathSegments = urlObj.pathname.split('/print_files/');
+                        if (pathSegments.length > 1) {
+                            const filePath = decodeURIComponent(pathSegments[1]);
+                            await supabaseClient.storage.from('print_files').remove([filePath]);
+                        }
+                    } catch (err) {
+                        console.error("Delayed delete exception:", err);
                     }
-                } catch (err) {
-                    console.error("Delayed delete exception:", err);
-                }
-            }, 5000);
+                }, 5000);
+            }
         }
 
         async function autoCleanOldPrintedJobs() {
@@ -209,10 +210,23 @@
 
             if(data) {
                 data.forEach(j => {
+                    const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
+
                     if(j.status !== 'printed') {
-                        pList.innerHTML += '<div class="flex justify-between items-center p-4 bg-slate-50 rounded-xl"><div><span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">TOKEN ' + j.token_number + '</span><p class="font-bold text-sm mt-1">' + j.file_name.substring(14) + '</p></div><button onclick="markAsPrinted(' + j.id + ', \'' + j.file_url + '\')" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold">PRINT</button></div>';
+                        // Pending List Item
+                        pList.innerHTML += '<div class="flex justify-between items-center p-4 bg-slate-50 rounded-xl"><div><span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">TOKEN ' + j.token_number + '</span>' + oneViewBadge + '<p class="font-bold text-sm mt-1">' + j.file_name.substring(14) + '</p></div><button onclick="markAsPrinted(' + j.id + ', \'' + j.file_url + '\', ' + j.is_one_view + ')" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 transition">PRINT</button></div>';
                     } else {
-                        hList.innerHTML += '<div class="text-xs p-3 bg-emerald-50 text-emerald-800 rounded-lg flex justify-between items-center"><span>' + j.file_name.substring(14) + '</span><span class="font-bold text-[10px] bg-emerald-200 px-2 py-0.5 rounded">Auto-delete in 5m</span></div>';
+                        // Printed History Item
+                        let actionButton = '';
+                        if (!j.is_one_view) {
+                            // Normal file hai toh history se bhi dubara reprint/open kar sakte hain
+                            actionButton = '<button onclick="openFileForPrint(\'' + j.file_url + '\')" class="bg-slate-200 hover:bg-blue-600 hover:text-white text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold transition">REPRINT</button>';
+                        } else {
+                            // One View hai toh locked/expired dikhayega
+                            actionButton = '<span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Expired</span>';
+                        }
+
+                        hList.innerHTML += '<div class="text-xs p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center"><div><span class="font-bold block text-slate-700">' + j.file_name.substring(14) + '</span>' + oneViewBadge + '</div><div class="flex items-center gap-2">' + actionButton + '</div></div>';
                     }
                 });
                 document.getElementById('fileCount').innerText = data.filter(j => j.status !== 'printed').length + ' Files';

@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- PDF.js library for accurate page counting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
 <body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800">
 
@@ -25,12 +30,28 @@
                     <p class="text-xs text-slate-400 mt-1">Supports PDF, JPG, PNG</p>
                 </div>
 
+                <!-- Print Type Selection (B&W or Color) -->
+                <div class="mt-4 grid grid-cols-2 gap-3 text-left">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="printType" value="bw" checked class="peer hidden">
+                        <div class="p-3 bg-slate-50 border-2 border-slate-200 rounded-xl peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition text-center">
+                            <span class="block text-xs font-bold text-slate-700 peer-checked:text-blue-600"><i class="fas fa-print mr-1"></i> B&W</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="printType" value="color" class="peer hidden">
+                        <div class="p-3 bg-slate-50 border-2 border-slate-200 rounded-xl peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition text-center">
+                            <span class="block text-xs font-bold text-slate-700 peer-checked:text-blue-600"><i class="fas fa-palette mr-1"></i> Color</span>
+                        </div>
+                    </label>
+                </div>
+
                 <!-- One View Checkbox Option -->
-                <div class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 text-left">
+                <div class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 text-left">
                     <input type="checkbox" id="oneViewCheck" class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
                     <label for="oneViewCheck" class="text-xs text-slate-700 cursor-pointer select-none">
                         <span class="font-bold block text-slate-900"><i class="fas fa-eye-slash text-blue-500 mr-1"></i> Send as "One View"</span>
-                        Deletes automatically after single print session. Leave unchecked for multi-print support.
+                        Deletes automatically after single print session.
                     </label>
                 </div>
 
@@ -42,7 +63,8 @@
                 <div class="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl">
                     <p class="text-emerald-800 font-bold text-xs uppercase tracking-wider">Your Print Token</p>
                     <h2 id="tokenNumber" class="text-5xl font-black text-emerald-600 my-3">--</h2>
-                    <p class="text-xs text-emerald-700 font-medium">Show this token at the counter</p>
+                    <p id="priceSummary" class="text-xs font-bold text-emerald-800 mt-1">Total Estimated Price: ₹0.00</p>
+                    <p class="text-xs text-emerald-700 font-medium mt-1">Show this token at the counter</p>
                 </div>
 
                 <!-- Adsterra Banner 300x250 Integrated Here -->
@@ -86,7 +108,7 @@
         </div>
     </footer>
 
-    <!-- Customer Upload Logic -->
+    <!-- Customer Upload Logic with PDF Page Counting & Pricing -->
     <script>
         const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
@@ -116,6 +138,7 @@
         function resetUpload() {
             document.getElementById('fileInput').value = "";
             document.getElementById('oneViewCheck').checked = false;
+            document.querySelector('input[name="printType"][value="bw"]').checked = true;
             document.getElementById('tokenDisplay').classList.add('hidden');
             document.getElementById('uploadUI').classList.remove('hidden');
             document.getElementById('fileLabel').innerText = "Tap to Select Files (Multiple allowed)";
@@ -124,26 +147,70 @@
             document.getElementById('uploadBtn').innerText = "Upload & Get Token";
         }
 
+        // Function to count pages in a PDF file
+        async function getPdfPageCount(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                return pdf.numPages;
+            } catch (error) {
+                console.error("Error reading PDF pages:", error);
+                return 1; // Fallback to 1 page if error occurs
+            }
+        }
+
         async function uploadFiles() {
             const fileInput = document.getElementById('fileInput');
-            const isOneView = document.getElementById('oneViewCheck').checked;
+            const isOneView = document.getElementById('oneViewCheck'].checked;
+            const printType = document.querySelector('input[name="printType"]:checked').value;
 
             if (!shopSlug) return alert("Invalid shop reference!");
             if (!fileInput.files || fileInput.files.length === 0) return alert("Please select at least one file first!");
 
             const btn = document.getElementById('uploadBtn');
-            btn.innerText = "Uploading files...";
             btn.disabled = true;
 
             try {
+                // Default per-page rates (Fallback if shop settings not found)
+                let bwRate = 2.00;
+                let colorRate = 10.00;
+
+                // Fetch shop specific rates from database if available
+                const { data: shopData } = await supabaseClient
+                    .from('shops')
+                    .select('bw_rate, color_rate')
+                    .eq('shop_slug', shopSlug)
+                    .single();
+
+                if (shopData) {
+                    if (shopData.bw_rate) bwRate = parseFloat(shopData.bw_rate);
+                    if (shopData.color_rate) colorRate = parseFloat(shopData.color_rate);
+                }
+
                 const token = "#" + Math.floor(1000 + Math.random() * 9000);
                 const files = fileInput.files;
+                let grandTotalPrice = 0;
 
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
+                    let filePages = 1;
+
+                    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) {
+                        btn.innerText = `Reading PDF (${i+1}/${files.length})...`;
+                        filePages = await getPdfPageCount(file);
+                    } else {
+                        filePages = 1; // Images are counted as 1 page
+                    }
+
+                    // Calculate price for this file based on type and rates
+                    const ratePerUnit = (printType === 'color') ? colorRate : bwRate;
+                    const filePrice = filePages * ratePerUnit;
+                    grandTotalPrice += filePrice;
+
                     const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
                     const fileName = Date.now() + "_" + cleanName;
 
+                    btn.innerText = `Uploading (${i+1}/${files.length})...`;
                     await supabaseClient.storage.from('print_files').upload(fileName, file);
                     const { data: urlData } = supabaseClient.storage.from('print_files').getPublicUrl(fileName);
 
@@ -152,13 +219,17 @@
                         file_name: fileName,
                         file_url: urlData.publicUrl,
                         shop_slug: shopSlug,
-                        is_one_view: isOneView
+                        is_one_view: isOneView,
+                        print_type: printType,
+                        total_pages: filePages,
+                        total_price: filePrice
                     }]);
                 }
 
                 document.getElementById('uploadUI').classList.add('hidden');
                 document.getElementById('tokenDisplay').classList.remove('hidden');
                 document.getElementById('tokenNumber').innerText = token;
+                document.getElementById('priceSummary').innerText = `Total Estimated Price: ₹${grandTotalPrice.toFixed(2)}`;
             } catch (err) {
                 alert("Upload failed! Please try again. Error: " + err.message);
                 btn.innerText = "Upload & Get Token";

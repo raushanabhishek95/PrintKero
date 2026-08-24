@@ -1,114 +1,406 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrintKero | Instant Wireless Printing Solution</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .floating-anim { animation: float 4s ease-in-out infinite; }
 
-    <!-- Navbar / Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.05); }
+        }
+        .glow-bg { animation: pulseGlow 6s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800 selection:bg-blue-600 selection:text-white overflow-x-hidden">
+
+    <!-- Header / Sticky Navbar -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 transition-all">
         <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="home.html" class="text-2xl font-black tracking-tighter text-slate-900">
-                Print<span class="text-blue-600">Kero</span>
+            <a href="home.html" class="text-2xl font-black tracking-tighter text-slate-950 flex items-center gap-1">
+                Print<span class="text-blue-600">Kero</span><span class="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
             </a>
             <div class="flex items-center gap-3">
-                <a href="auth.html" class="text-slate-600 hover:text-blue-600 font-semibold px-4 py-2 text-sm transition">Login</a>
-                <a href="auth.html" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md transition">Register Shop</a>
+                <button onclick="openAuthModal('login')" class="text-slate-600 hover:text-blue-600 font-semibold px-4 py-2 text-sm transition">Login</button>
+                <button onclick="openAuthModal('register')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all">Register Shop</button>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main Content Area -->
     <main class="flex-grow">
 
-        <!-- Top Banner Ad Space (Adsterra 300x250 Banner - UPDATED) -->
-        <div class="max-w-4xl mx-auto px-6 pt-6 flex justify-center">
-            <script type="text/javascript">
-                atOptions = {
-                    'key' : '2a7f8caa2a02bb3f31008ff6f3cc64fe',
-                    'format' : 'iframe',
-                    'height' : 250,
-                    'width' : 300,
-                    'params' : {}
-                };
-            </script>
-            <script type="text/javascript" src="https://www.highperformanceformat.com/2a7f8caa2a02bb3f31008ff6f3cc64fe/invoke.js"></script>
-        </div>
-
         <!-- Hero Section -->
-        <section class="max-w-5xl mx-auto px-6 py-12 text-center">
-            <span class="bg-blue-100 text-blue-700 font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-full inline-block mb-4">
-                ⚡ Fast & Contactless Printing
-            </span>
-            <h1 class="text-4xl md:text-6xl font-black tracking-tight text-slate-900 mb-6">
-                Print Documents Instantly <br>Without Any App!
+        <section class="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-blue-500/10 rounded-full blur-3xl -z-10 glow-bg"></div>
+
+            <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full mb-6 shadow-sm animate-bounce">
+                <i class="fas fa-bolt text-amber-500"></i> Next-Gen Contactless Print Automation
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-950 mb-6 leading-[1.1]">
+                Print Documents Instantly <br class="hidden sm:inline">
+                <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">Without Any App!</span>
             </h1>
-            <p class="text-slate-600 text-lg md:text-xl max-w-2xl mx-auto mb-10">
-                Scan the QR code at your nearest partner print shop, upload your files securely in seconds, and grab your printouts instantly.
+
+            <p class="text-slate-600 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                Scan the QR code at your nearest partner print shop, auto-detect PDF page counts, and manage tokens seamlessly in real-time.
             </p>
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="auth.html" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-2xl shadow-lg text-base transition">
-                    <i class="fas fa-store mr-2"></i> Join as Shop Owner
+
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                <button onclick="openAuthModal('register')" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 text-base">
+                    <i class="fas fa-store text-lg"></i> Register Your Shop Free
+                </button>
+                <a href="#howitworks" class="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold px-8 py-4 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 text-base">
+                    See How It Works <i class="fas fa-arrow-down text-xs text-slate-400"></i>
                 </a>
             </div>
-        </section>
 
-        <!-- Features Grid -->
-        <section class="bg-white py-16 border-t border-slate-200">
-            <div class="max-w-6xl mx-auto px-6">
-                <h2 class="text-2xl md:text-3xl font-black text-center text-slate-900 mb-12">Why Choose PrintKero?</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="p-8 bg-slate-50 rounded-3xl border border-slate-100 text-center">
-                        <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-5">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                        <h3 class="font-bold text-lg mb-2">Lightning Fast</h3>
-                        <p class="text-slate-500 text-sm">No need to install heavy apps or struggle with Bluetooth pairing. Just scan and upload.</p>
+            <!-- Floating Visual Token Badge -->
+            <div class="mt-16 flex justify-center">
+                <div class="floating-anim p-4 bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-check-circle"></i>
                     </div>
-                    <div class="p-8 bg-slate-50 rounded-3xl border border-slate-100 text-center">
-                        <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-5">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <h3 class="font-bold text-lg mb-2">Secure & Private</h3>
-                        <p class="text-slate-500 text-sm">Your files are handled securely and directly routed to the printer counter.</p>
-                    </div>
-                    <div class="p-8 bg-slate-50 rounded-3xl border border-slate-100 text-center">
-                        <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-5">
-                            <i class="fas fa-ticket-alt"></i>
-                        </div>
-                        <h3 class="font-bold text-lg mb-2">Token System</h3>
-                        <p class="text-slate-500 text-sm">Get a unique token instantly upon upload to show at the counter for seamless collection.</p>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live System Status</p>
+                        <h4 class="text-sm font-black text-slate-800">Token #4028 Generated & Priced!</h4>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Middle / In-Feed Ad Space (Adsterra 300x250 Banner - UPDATED) -->
-        <div class="max-w-4xl mx-auto px-6 py-10 flex justify-center">
-            <script type="text/javascript">
-                atOptions = {
-                    'key' : '2a7f8caa2a02bb3f31008ff6f3cc64fe',
-                    'format' : 'iframe',
-                    'height' : 250,
-                    'width' : 300,
-                    'params' : {}
-                };
-            </script>
-            <script type="text/javascript" src="https://www.highperformanceformat.com/2a7f8caa2a02bb3f31008ff6f3cc64fe/invoke.js"></script>
-        </div>
+        <!-- Stats Bar -->
+        <section class="border-y border-slate-100 bg-white py-8">
+            <div class="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div>
+                    <h3 class="text-3xl font-black text-slate-950">100%</h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Contactless Upload</p>
+                </div>
+                <div>
+                    <h3 class="text-3xl font-black text-blue-600">Zero</h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">App Install Required</p>
+                </div>
+                <div>
+                    <h3 class="text-3xl font-black text-slate-950">Auto</h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">PDF Page Counting</p>
+                </div>
+                <div>
+                    <h3 class="text-3xl font-black text-emerald-600">Instant</h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Token Generation</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="howitworks" class="py-24 bg-slate-50 relative overflow-hidden">
+            <div class="max-w-6xl mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <span class="bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full inline-block mb-3">
+                        Seamless Process
+                    </span>
+                    <h2 class="text-3xl md:text-5xl font-black text-slate-950 tracking-tight">
+                        How PrintKero Works in <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">3 Easy Steps</span>
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+                    <div class="relative bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group hover:-translate-y-1.5">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-lg shadow-blue-600/30 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <span class="text-4xl font-black text-slate-200 group-hover:text-blue-600/20 transition-colors">01</span>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Scan Shop QR</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Open your phone camera and scan the unique QR code placed right on the counter.</p>
+                    </div>
+
+                    <div class="relative bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group hover:-translate-y-1.5">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-600/30 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <span class="text-4xl font-black text-slate-200 group-hover:text-indigo-600/20 transition-colors">02</span>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Upload & Customize</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Select PDF/images, choose B&W or Color options, and let the system calculate pages.</p>
+                    </div>
+
+                    <div class="relative bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group hover:-translate-y-1.5">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-600/30 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-print"></i>
+                            </div>
+                            <span class="text-4xl font-black text-slate-200 group-hover:text-emerald-600/20 transition-colors">03</span>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Get Token & Collect</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Receive an instant digital token. Show it at the counter and grab your printouts!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-8 text-center text-slate-500 text-xs">
-        <p>&copy; 2026 PrintKero. All rights reserved.</p>
+    <!-- INLINE AUTH MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full relative shadow-2xl my-8">
+            <button onclick="closeAuthModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+
+            <!-- Tabs Switcher -->
+            <div id="authTabsHeader" class="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
+                <button id="loginTabBtn" onclick="switchAuthTab('login')" class="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition">Login</button>
+                <button id="registerTabBtn" onclick="switchAuthTab('register')" class="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition">Register Shop</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="loginFormContainer" class="space-y-4">
+                <h3 class="text-xl font-black text-slate-900">Welcome Back!</h3>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="loginEmail" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="shop@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="loginPass" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10" placeholder="••••••••">
+                        <button type="button" onclick="togglePasswordVisibility('loginPass', 'loginEyeIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i id="loginEyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <button onclick="switchAuthTab('forgot')" class="text-xs font-bold text-blue-600 hover:underline">Forgot Password?</button>
+                </div>
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm flex items-center justify-center gap-2">
+                    <span>Login to Dashboard</span>
+                </button>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="registerFormContainer" class="space-y-4 hidden max-h-[60vh] overflow-y-auto pr-1">
+                <h3 class="text-xl font-black text-slate-900">Create Shop Account</h3>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Shop Name</label>
+                    <input type="text" id="regShopName" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Sharma Xerox">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Number (10 Digits)</label>
+                    <input type="tel" id="regMobile" maxlength="10" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="9876543210">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Shop Address</label>
+                    <input type="text" id="regAddress" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Main Market, Near SBI Bank">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="regEmail" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="shop@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="regPass" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10" placeholder="••••••••">
+                        <button type="button" onclick="togglePasswordVisibility('regPass', 'regEyeIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i id="regEyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button id="registerBtn" onclick="handleRegister()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm mt-2 flex items-center justify-center gap-2">
+                    <span>Register & Launch Shop</span>
+                </button>
+            </div>
+
+            <!-- FORGOT PASSWORD FORM -->
+            <div id="forgotFormContainer" class="space-y-4 hidden">
+                <h3 class="text-xl font-black text-slate-900">Reset Password</h3>
+                <p class="text-xs text-slate-500">Enter your registered email address to retrieve or reset your password credentials.</p>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Registered Email Address</label>
+                    <input type="email" id="forgotEmail" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="shop@email.com">
+                </div>
+                <button onclick="handleForgotPassword()" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm">Send Account Details</button>
+                <div class="text-center pt-2">
+                    <button onclick="switchAuthTab('login')" class="text-xs font-bold text-slate-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i> Back to Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional Footer -->
+    <footer class="bg-white border-t border-slate-100 py-10">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+            <div>
+                <span class="text-lg font-black tracking-tighter text-slate-950">Print<span class="text-blue-600">Kero</span></span>
+                <p class="text-xs text-slate-400 mt-1">&copy; 2026 PrintKero. All rights reserved.</p>
+            </div>
+            <div class="flex items-center gap-6 text-sm text-slate-500 font-medium">
+                <button onclick="openAuthModal('login')" class="hover:text-blue-600 transition">Shop Portal</button>
+                <a href="mailto:raushanabhishek95089@gmail.com" class="hover:text-blue-600 transition">Contact Developer</a>
+            </div>
+        </div>
     </footer>
 
-    <!-- Adsterra Social Bar Script (UPDATED) -->
-    <script src="https://pl30904930.effectivecpmnetwork.com/fb/6a/14/fb6a14a37de6d2414bb8f16687ee901c.js"></script>
+    <!-- Script Logic -->
+    <script>
+        const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function openAuthModal(mode) {
+            document.getElementById('authModal').classList.remove('hidden');
+            switchAuthTab(mode);
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        function switchAuthTab(mode) {
+            const loginTab = document.getElementById('loginTabBtn');
+            const regTab = document.getElementById('registerTabBtn');
+            const tabsHeader = document.getElementById('authTabsHeader');
+
+            const loginForm = document.getElementById('loginFormContainer');
+            const regForm = document.getElementById('registerFormContainer');
+            const forgotForm = document.getElementById('forgotFormContainer');
+
+            loginForm.classList.add('hidden');
+            regForm.classList.add('hidden');
+            forgotForm.classList.add('hidden');
+            tabsHeader.classList.remove('hidden');
+
+            if(mode === 'login') {
+                loginTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-blue-600 text-white shadow-md transition";
+                regTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-500 hover:text-slate-900 transition";
+                loginForm.classList.remove('hidden');
+            } else if(mode === 'register') {
+                regTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-blue-600 text-white shadow-md transition";
+                loginTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-500 hover:text-slate-900 transition";
+                regForm.classList.remove('hidden');
+            } else if(mode === 'forgot') {
+                tabsHeader.classList.add('hidden');
+                forgotForm.classList.remove('hidden');
+            }
+        }
+
+        function togglePasswordVisibility(fieldId, iconId) {
+            const passwordField = document.getElementById(fieldId);
+            const eyeIcon = document.getElementById(iconId);
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const btn = document.getElementById('loginBtn');
+
+            if(!email || !pass) return alert("Please fill in all fields!");
+            if(!isValidEmail(email)) return alert("Please enter a valid email address!");
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Logging in...`;
+
+            const { data, error } = await supabaseClient
+                .from('shops')
+                .select('*')
+                .eq('email', email)
+                .eq('password', pass)
+                .single();
+
+            if(error || !data) {
+                alert("Invalid email or password!");
+                btn.disabled = false;
+                btn.innerHTML = `<span>Login to Dashboard</span>`;
+            } else {
+                localStorage.setItem('shopSlug', data.shop_slug);
+                localStorage.setItem('shopName', data.shop_name);
+                window.location.href = 'dashboard.html?shop=' + data.shop_slug;
+            }
+        }
+
+        async function handleRegister() {
+            const shopName = document.getElementById('regShopName').value.trim();
+            const mobileNumber = document.getElementById('regMobile').value.trim();
+            const address = document.getElementById('regAddress').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+            const btn = document.getElementById('registerBtn');
+
+            // Validation checks (Password length restriction removed as requested)
+            if(!shopName || !mobileNumber || !address || !email || !pass) {
+                return alert("Please fill all fields!");
+            }
+            if(!isValidEmail(email)) {
+                return alert("Please enter a valid email address!");
+            }
+            if(mobileNumber.length !== 10 || isNaN(mobileNumber)) {
+                return alert("Please enter a valid 10-digit mobile number!");
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Registering Shop...`;
+
+            const shopSlug = shopName.toLowerCase().replace(/[^a-z0-9]/g, '_') + "_" + Math.floor(100 + Math.random() * 900);
+
+            const { error } = await supabaseClient.from('shops').insert([{
+                shop_name: shopName,
+                email: email,
+                password: pass,
+                shop_slug: shopSlug,
+                mobile_number: mobileNumber,
+                address: address,
+                bw_rate: 0.00,
+                color_rate: 0.00
+            }]);
+
+            if(error) {
+                alert("Registration failed: " + error.message);
+                btn.disabled = false;
+                btn.innerHTML = `<span>Register & Launch Shop</span>`;
+            } else {
+                localStorage.setItem('shopSlug', shopSlug);
+                localStorage.setItem('shopName', shopName);
+                window.location.href = 'dashboard.html?shop=' + shopSlug;
+            }
+        }
+
+        async function handleForgotPassword() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            if(!email || !isValidEmail(email)) return alert("Please enter a valid registered email address!");
+
+            const { data, error } = await supabaseClient
+                .from('shops')
+                .select('shop_name, password')
+                .eq('email', email)
+                .single();
+
+            if(error || !data) {
+                alert("No shop account found with this email address.");
+            } else {
+                alert(`Account found for "${data.shop_name}"!\nYour current password is: ${data.password}`);
+                switchAuthTab('login');
+            }
+        }
+    </script>
 </body>
 </html>

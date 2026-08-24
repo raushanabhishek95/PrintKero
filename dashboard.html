@@ -168,6 +168,9 @@
         }
 
         function printQR() {
+            // Google Chart API ka use karke direct image URL banate hain jo mobile par kabhi gayab nahi hota
+            const googleQRUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(customerLink)}`;
+
             const qrWindow = window.open('', '_blank', 'width=800,height=800');
             qrWindow.document.write(
                 '<html>' +
@@ -177,27 +180,27 @@
                 'body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; background: #fff; }' +
                 '.container { text-align: center; padding: 40px; border: 4px dashed #2563eb; border-radius: 24px; background: #f8fafc; }' +
                 'h2 { color: #1e293b; font-size: 28px; margin-bottom: 20px; }' +
-                '#qrcode { display: inline-block; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; }' +
-                '#qrcode img { display: block; width: 220px !important; height: 220px !important; }' +
+                '.qr-box { display: inline-block; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }' +
+                '.qr-box img { display: block; width: 220px; height: 220px; }' +
                 'p { font-size: 20px; font-weight: bold; color: #2563eb; margin-top: 15px; }' +
-                '.print-btn { margin-top: 20px; padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }' +
+                '.print-btn { margin-top: 20px; padding: 14px 28px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }' +
                 '@media print { .print-btn { display: none; } }' +
                 '</style>' +
                 '</head>' +
                 '<body>' +
                 '<div class="container">' +
                 '<h2>Scan to Upload & Print File</h2>' +
-                '<div id="qrcode">' + document.getElementById('qrcode').innerHTML + '</div>' +
+                '<div class="qr-box"><img src="' + googleQRUrl + '" alt="Shop QR Code"></div>' +
                 '<p>PrintKero Instant Printing</p>' +
-                '<button class="print-btn" onclick="window.print()">Click Here to Print</button>' +
+                '<button class="print-btn" onclick="window.print()">🖨️ Click Here to Print QR</button>' +
                 '</div>' +
                 '<script>' +
-                // Automatic ke sath-sath ek button bhi de diya hai taaki agar auto print miss ho toh user click kar sake
+                // Thoda delay dekar auto print trigger hoga, aur agar mobile block kare toh button toh hai hi!
                 'window.onload = function() {' +
                 '    setTimeout(function() {' +
                 '        window.focus();' +
                 '        window.print();' +
-                '    }, 1500);' +
+                '    }, 1000);' +
                 '};' +
                 '<\/script>' +
                 '</body>' +

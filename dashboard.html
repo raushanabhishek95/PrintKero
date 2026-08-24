@@ -61,7 +61,7 @@
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="font-bold text-lg"><i class="fas fa-hourglass-half text-amber-500 mr-2"></i> Pending Prints</h2>
-                <span id="fileCount" class="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">0 Files</span>
+                <span id="fileCount" class="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">0 Orders</span>
             </div>
             <div id="pendingList" class="space-y-4"></div>
         </div>
@@ -153,7 +153,6 @@
             const bwRate = parseFloat(document.getElementById('inputBwRate').value) || 0.00;
             const colorRate = parseFloat(document.getElementById('inputColorRate').value) || 0.00;
 
-            // Fixed: Using .update() instead of .upsert() to avoid null-constraint violation on shop_name
             const { error } = await supabaseClient
                 .from('shops')
                 .update({ bw_rate: bwRate, color_rate: colorRate })
@@ -214,35 +213,46 @@
             }
         }
 
-        async function markAsPrinted(id, fileUrl, isOneView) {
-            openFileForPrint(fileUrl);
+        // Global map to store token jobs safely without HTML string corruption
+        let activeTokenGroups = {};
 
-            const { error } = await supabaseClient
-                .from('print_jobs')
-                .update({
-                    status: 'printed',
-                    printed_at: new Date().toISOString()
-                })
-                .eq('id', id);
+        async function markTokenAsPrinted(tokenNumber) {
+            const jobs = activeTokenGroups[tokenNumber];
+            if (!jobs || jobs.length === 0) return;
 
-            if (!error) {
-                fetchPrintJobs();
-            }
+            // Open files with staggered delay to bypass browser pop-up blockers
+            jobs.forEach((j, index) => {
+                setTimeout(() => {
+                    openFileForPrint(j.file_url);
+                }, index * 400);
+            });
 
-            if (isOneView) {
-                setTimeout(async () => {
-                    try {
-                        const urlObj = new URL(fileUrl);
-                        const pathSegments = urlObj.pathname.split('/print_files/');
-                        if (pathSegments.length > 1) {
-                            const filePath = decodeURIComponent(pathSegments[1]);
-                            await supabaseClient.storage.from('print_files').remove([filePath]);
+            for (let j of jobs) {
+                await supabaseClient
+                    .from('print_jobs')
+                    .update({
+                        status: 'printed',
+                        printed_at: new Date().toISOString()
+                    })
+                    .eq('id', j.id);
+
+                if (j.is_one_view) {
+                    setTimeout(async () => {
+                        try {
+                            const urlObj = new URL(j.file_url);
+                            const pathSegments = urlObj.pathname.split('/print_files/');
+                            if (pathSegments.length > 1) {
+                                const filePath = decodeURIComponent(pathSegments[1]);
+                                await supabaseClient.storage.from('print_files').remove([filePath]);
+                            }
+                        } catch (err) {
+                            console.error("Delayed delete exception:", err);
                         }
-                    } catch (err) {
-                        console.error("Delayed delete exception:", err);
-                    }
-                }, 5000);
+                    }, 5000);
+                }
             }
+
+            fetchPrintJobs();
         }
 
         async function autoCleanOldPrintedJobs() {
@@ -267,27 +277,73 @@
             pList.innerHTML = ""; hList.innerHTML = "";
 
             if(data) {
-                data.forEach(j => {
+                const pendingJobs = data.filter(j => j.status !== 'printed');
+                const printedJobs = data.filter(j => j.status === 'printed');
+
+                const tokenGroups = {};
+                pendingJobs.forEach(j => {
+                    if (!tokenGroups[j.token_number]) {
+                        tokenGroups[j.token_number] = [];
+                    }
+                    tokenGroups[j.token_number].push(j);
+                });
+
+                // Clear previous map and repopulate
+                activeTokenGroups = {};
+
+                Object.keys(tokenGroups).forEach(token => {
+                    const groupJobs = tokenGroups[token];
+                    activeTokenGroups[token] = groupJobs;
+
+                    let groupTotalPrice = 0;
+                    let groupTotalPages = 0;
+                    let fileItemsHtml = "";
+
+                    groupJobs.forEach(j => {
+                        groupTotalPrice += (j.total_price || 0);
+                        groupTotalPages += (j.total_pages || 1);
+                        const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';
+                        const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
+
+                        fileItemsHtml += `<div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-none">
+                            <div class="truncate pr-2">
+                                <p class="font-bold text-xs text-slate-700 truncate">${j.file_name.substring(14)}</p>
+                                <div class="flex items-center gap-1 mt-0.5">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">• ${j.total_pages || 1} Pages</span></div>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-600 whitespace-nowrap">₹${(j.total_price || 0).toFixed(2)}</span>
+                        </div>`;
+                    });
+
+                    pList.innerHTML += `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span class="text-xs font-black bg-blue-600 text-white px-2.5 py-1 rounded-lg">TOKEN ${token}</span>
+                            <div class="text-right">
+                                <span class="text-xs font-bold text-slate-500 block">${groupJobs.length} Files (${groupTotalPages} Pages)</span>
+                                <span class="text-sm font-black text-emerald-600">Total: ₹${groupTotalPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="space-y-1">${fileItemsHtml}</div>
+                        <button onclick="markTokenAsPrinted('${token}')" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition flex justify-center items-center gap-2">
+                            <i class="fas fa-print"></i> <span>PRINT ALL (${groupJobs.length})</span>
+                        </button>
+                    </div>`;
+                });
+
+                printedJobs.forEach(j => {
                     const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
                     const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';
-                    const priceInfo = `<span class="text-xs font-bold text-emerald-600 block mt-1"><i class="fas fa-file-alt mr-1"></i> ${j.total_pages || 1} Pages | ₹${(j.total_price || 0).toFixed(2)}</span>`;
 
-                    if(j.status !== 'printed') {
-                        // Pending List Item
-                        pList.innerHTML += '<div class="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100"><div><div class="flex items-center gap-1"><span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">TOKEN ' + j.token_number + '</span>' + typeBadge + oneViewBadge + '</div><p class="font-bold text-sm mt-1">' + j.file_name.substring(14) + '</p>' + priceInfo + '</div><button onclick="markAsPrinted(' + j.id + ', \'' + j.file_url + '\', ' + j.is_one_view + ')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition">PRINT</button></div>';
+                    let actionButton = '';
+                    if (!j.is_one_view) {
+                        actionButton = '<button onclick="openFileForPrint(\'' + j.file_url + '\')" class="bg-slate-200 hover:bg-blue-600 hover:text-white text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold transition">REPRINT</button>';
                     } else {
-                        // Printed History Item
-                        let actionButton = '';
-                        if (!j.is_one_view) {
-                            actionButton = '<button onclick="openFileForPrint(\'' + j.file_url + '\')" class="bg-slate-200 hover:bg-blue-600 hover:text-white text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold transition">REPRINT</button>';
-                        } else {
-                            actionButton = '<span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Expired</span>';
-                        }
-
-                        hList.innerHTML += `<div class="text-xs p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center"><div><div class="flex items-center gap-1"><span class="font-bold text-slate-700">${j.file_name.substring(14)}</span>${typeBadge}${oneViewBadge}</div><span class="text-[11px] text-slate-500">${j.total_pages || 1} Pages • ₹${(j.total_price || 0).toFixed(2)}</span></div><div class="flex items-center gap-2">${actionButton}</div></div>`;
+                        actionButton = '<span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Expired</span>';
                     }
+
+                    hList.innerHTML += `<div class="text-xs p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center"><div><div class="flex items-center gap-1"><span class="font-bold text-slate-700">${j.file_name.substring(14)}</span>${typeBadge}${oneViewBadge}</div><span class="text-[11px] text-slate-500">${j.total_pages || 1} Pages • ₹${(j.total_price || 0).toFixed(2)}</span></div><div class="flex items-center gap-2">${actionButton}</div></div>`;
                 });
-                document.getElementById('fileCount').innerText = data.filter(j => j.status !== 'printed').length + ' Files';
+
+                document.getElementById('fileCount').innerText = Object.keys(tokenGroups).length + ' Orders';
             }
         }
 

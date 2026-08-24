@@ -168,7 +168,6 @@
         }
 
         function printQR() {
-            // Google Chart API ka use karke direct image URL banate hain jo mobile par kabhi gayab nahi hota
             const googleQRUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(customerLink)}`;
 
             const qrWindow = window.open('', '_blank', 'width=800,height=800');
@@ -195,7 +194,6 @@
                 '<button class="print-btn" onclick="window.print()">🖨️ Click Here to Print QR</button>' +
                 '</div>' +
                 '<script>' +
-                // Thoda delay dekar auto print trigger hoga, aur agar mobile block kare toh button toh hai hi!
                 'window.onload = function() {' +
                 '    setTimeout(function() {' +
                 '        window.focus();' +
@@ -262,12 +260,37 @@
         async function autoCleanOldPrintedJobs() {
             try {
                 const fiveMinutesAgo = new Date(new Date().getTime() - 5 * 60 * 1000).toISOString();
-                await supabaseClient
+
+                // 1. Fetch old printed jobs to delete their files from storage bucket
+                const { data: oldJobs, error: fetchError } = await supabaseClient
                     .from('print_jobs')
-                    .delete()
+                    .select('id, file_url')
                     .eq('shop_slug', shopSlug)
                     .eq('status', 'printed')
                     .lt('printed_at', fiveMinutesAgo);
+
+                if (oldJobs && oldJobs.length > 0) {
+                    for (const job of oldJobs) {
+                        try {
+                            const urlObj = new URL(job.file_url);
+                            const pathSegments = urlObj.pathname.split('/print_files/');
+                            if (pathSegments.length > 1) {
+                                const filePath = decodeURIComponent(pathSegments[1]);
+                                await supabaseClient.storage.from('print_files').remove([filePath]);
+                            }
+                        } catch (err) {
+                            console.error("Storage delete error for job:", job.id, err);
+                        }
+                    }
+
+                    // 2. Delete records from database table
+                    await supabaseClient
+                        .from('print_jobs')
+                        .delete()
+                        .eq('shop_slug', shopSlug)
+                        .eq('status', 'printed')
+                        .lt('printed_at', fiveMinutesAgo);
+                }
             } catch (e) {
                 console.error("Auto clean error:", e);
             }

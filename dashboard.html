@@ -180,6 +180,8 @@
                 '#qrcode { display: inline-block; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; }' +
                 '#qrcode img { display: block; width: 220px !important; height: 220px !important; }' +
                 'p { font-size: 20px; font-weight: bold; color: #2563eb; margin-top: 15px; }' +
+                '.print-btn { margin-top: 20px; padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }' +
+                '@media print { .print-btn { display: none; } }' +
                 '</style>' +
                 '</head>' +
                 '<body>' +
@@ -187,13 +189,15 @@
                 '<h2>Scan to Upload & Print File</h2>' +
                 '<div id="qrcode">' + document.getElementById('qrcode').innerHTML + '</div>' +
                 '<p>PrintKero Instant Printing</p>' +
+                '<button class="print-btn" onclick="window.print()">Click Here to Print</button>' +
                 '</div>' +
                 '<script>' +
+                // Automatic ke sath-sath ek button bhi de diya hai taaki agar auto print miss ho toh user click kar sake
                 'window.onload = function() {' +
                 '    setTimeout(function() {' +
                 '        window.focus();' +
                 '        window.print();' +
-                '    }, 600);' +
+                '    }, 1500);' +
                 '};' +
                 '<\/script>' +
                 '</body>' +

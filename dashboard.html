@@ -113,7 +113,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         let shopSlug = urlParams.get('shop') || localStorage.getItem('shopSlug');
 
-        // Fixed: Redirect to home.html instead of deleted auth.html
         if (!shopSlug) window.location.href = 'home.html';
 
         const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
@@ -154,9 +153,11 @@
             const bwRate = parseFloat(document.getElementById('inputBwRate').value) || 0.00;
             const colorRate = parseFloat(document.getElementById('inputColorRate').value) || 0.00;
 
+            // Fixed: Using .update() instead of .upsert() to avoid null-constraint violation on shop_name
             const { error } = await supabaseClient
                 .from('shops')
-                .upsert({ shop_slug: shopSlug, bw_rate: bwRate, color_rate: colorRate }, { onConflict: 'shop_slug' });
+                .update({ bw_rate: bwRate, color_rate: colorRate })
+                .eq('shop_slug', shopSlug);
 
             if (error) {
                 alert("Failed to save rates: " + error.message);
@@ -290,7 +291,6 @@
             }
         }
 
-        // Fixed logout function to redirect properly to home.html instead of auth.html
         function logoutShop() {
             localStorage.clear();
             window.location.href = 'home.html';

@@ -419,6 +419,7 @@
             } else {
                 localStorage.setItem('shopSlug', shopSlug);
                 localStorage.setItem('shopName', shopName);
+                localStorage.setItem('isFirstLogin', 'true'); // <-- Added flag here
                 window.location.href = 'dashboard.html?shop=' + shopSlug;
             }
         }

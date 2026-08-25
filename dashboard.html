@@ -119,6 +119,15 @@
         const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const customerLink = baseUrl + 'index.html?shop=' + shopSlug;
 
+        // Check if first-time login after registration to auto-open settings modal
+        window.addEventListener('DOMContentLoaded', () => {
+            const isFirstTime = localStorage.getItem('isFirstLogin');
+            if (isFirstTime === 'true') {
+                localStorage.removeItem('isFirstLogin');
+                toggleSettingsModal();
+            }
+        });
+
         let qrGenerated = false;
         function toggleQRModal() {
             const modal = document.getElementById('qrModal');

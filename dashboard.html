@@ -104,7 +104,7 @@
         if (!shopSlug) window.location.href = 'home.html';
 
         const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        const customerLink = baseUrl + 'index.html?shop=' + shopSlug;
+        const customerLink = baseUrl + 'upload.html?shop=' + shopSlug;
 
         // Check if first-time login after registration to auto-open settings modal
         window.addEventListener('DOMContentLoaded', () => {

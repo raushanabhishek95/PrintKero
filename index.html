@@ -1,246 +1,540 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
+    <!-- Auto-Login Check (Sabse pehle run hoga taaki flicker na ho) -->
+    <script>
+        const savedShopSlug = localStorage.getItem('shopSlug');
+        if (savedShopSlug) {
+            window.location.replace('dashboard.html?shop=' + savedShopSlug);
+        }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PrintKaro | Upload & Print</title>
+    <title>PrintKaro | Smart Print Automation for Xerox & Cyber Cafes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- PDF.js library for accurate page counting -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    <style>
+        /* Mobile horizontal scrolling & shifting fix */
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden !important;
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .floating-anim { animation: float 4s ease-in-out infinite; }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.25; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.03); }
+        }
+        .glow-bg { animation: pulseGlow 6s ease-in-out infinite; }
+    </style>
 </head>
-<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800">
+<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800 selection:bg-blue-600 selection:text-white">
 
-    <!-- Main Upload Section -->
-    <main class="flex-grow flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border-t-8 border-blue-600">
-            <h1 class="text-4xl font-black tracking-tighter text-slate-900 mb-2">Print<span class="text-blue-600">Karo</span></h1>
-            <p id="shopSubTitle" class="text-slate-500 mb-6 text-sm font-medium">Fast, secure, and instant wireless printing.</p>
-
-            <!-- Upload Box -->
-            <div id="uploadUI">
-                <input type="file" id="fileInput" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple>
-                <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-blue-300 rounded-2xl p-6 hover:bg-blue-50/50 cursor-pointer transition group">
-                    <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-2 group-hover:scale-110 transition"></i>
-                    <h3 id="fileLabel" class="text-sm font-bold text-slate-700">Tap to Select Files (Multiple allowed)</h3>
-                    <p class="text-xs text-slate-400 mt-1">Supports PDF, JPG, PNG</p>
-                </div>
-
-                <!-- Selected Files Preview Box -->
-                <div id="selectedFilesContainer" class="hidden mt-4 text-left max-h-36 overflow-y-auto space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200"></div>
-
-                <!-- Print Type Selection (B&W or Color) -->
-                <div class="mt-4 grid grid-cols-2 gap-3 text-left">
-                    <label class="cursor-pointer">
-                        <input type="radio" name="printType" value="bw" checked class="peer hidden">
-                        <div class="p-3 bg-slate-50 border-2 border-slate-200 rounded-xl peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition text-center">
-                            <span class="block text-xs font-bold text-slate-700 peer-checked:text-blue-600"><i class="fas fa-print mr-1"></i> B&W</span>
-                        </div>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="radio" name="printType" value="color" class="peer hidden">
-                        <div class="p-3 bg-slate-50 border-2 border-slate-200 rounded-xl peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition text-center">
-                            <span class="block text-xs font-bold text-slate-700 peer-checked:text-blue-600"><i class="fas fa-palette mr-1"></i> Color</span>
-                        </div>
-                    </label>
-                </div>
-
-                <!-- One View Checkbox Option -->
-                <div class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 text-left">
-                    <input type="checkbox" id="oneViewCheck" class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
-                    <label for="oneViewCheck" class="text-xs text-slate-700 cursor-pointer select-none">
-                        <span class="font-bold block text-slate-900"><i class="fas fa-eye-slash text-blue-500 mr-1"></i> Send as "One View"</span>
-                        Deletes automatically after single print session.
-                    </label>
-                </div>
-
-                <button id="uploadBtn" onclick="uploadFiles()" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition">Upload & Get Token</button>
-            </div>
-
-            <!-- Token Display Area (Success State) -->
-            <div id="tokenDisplay" class="hidden mt-4">
-                <div class="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl">
-                    <p class="text-emerald-800 font-bold text-xs uppercase tracking-wider">Your Print Token</p>
-                    <h2 id="tokenNumber" class="text-5xl font-black text-emerald-600 my-3">--</h2>
-                    <p id="priceSummary" class="text-xs font-bold text-emerald-800 mt-1">Total Estimated Price: ₹0.00</p>
-                    <p class="text-xs text-emerald-700 font-medium mt-1">Show this token at the counter</p>
-                </div>
-
-                <button onclick="resetUpload()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">
-                    <i class="fas fa-redo mr-2"></i> Upload Another File
-                </button>
+    <!-- Header / Sticky Navbar -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 transition-all">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-black tracking-tighter text-slate-950 flex items-center gap-1">
+                Print<span class="text-blue-600">Karo</span><span class="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
+            </a>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openAuthModal('login')" class="text-slate-600 hover:text-blue-600 font-bold px-3 sm:px-4 py-2 text-xs sm:text-sm transition">Login</button>
+                <button onclick="openAuthModal('register')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all">Register Shop Free</button>
             </div>
         </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow">
+
+        <!-- Hero Section -->
+        <section class="relative max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 text-center">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[18rem] sm:w-[30rem] h-[18rem] sm:h-[30rem] bg-blue-500/10 rounded-full blur-3xl -z-10 glow-bg"></div>
+
+            <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 font-bold text-[11px] sm:text-xs uppercase tracking-wider px-4 py-2 rounded-full mb-6 shadow-sm">
+                <i class="fas fa-store text-blue-600 animate-bounce"></i> Xerox & Cyber Café Shop Owners Ke Liye Complete Solution
+            </div>
+
+            <h1 class="text-3xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-950 mb-6 leading-[1.15]">
+                WhatsApp Par PDF Mangwana Bnd Karo! <br class="hidden sm:inline">
+                <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">Apni Dukaan Ka Digital QR Lagao.</span>
+            </h1>
+
+            <p class="text-slate-600 text-base sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed px-2">
+                Bheed me customer ko phone pass karne ki zaroorat nahi. Na WhatsApp par files download karke phone full karne ka jhanjhat—seedha cloud dashboard se 1-click direct print!
+            </p>
+
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 px-4 sm:px-0">
+                <button onclick="openAuthModal('register')" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 text-sm sm:text-base">
+                    <i class="fas fa-rocket text-lg"></i> Apni Shop Free Register Karein
+                </button>
+                <a href="#features" class="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold px-8 py-4 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm sm:text-base">
+                    Saare Features Dekhein <i class="fas fa-arrow-down text-xs text-slate-400"></i>
+                </a>
+            </div>
+
+            <!-- Floating Visual Token Badge -->
+            <div class="mt-14 flex justify-center px-4">
+                <div class="floating-anim p-4 bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-100 max-w-sm w-full flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Live System Update</p>
+                        <h4 class="text-xs sm:text-sm font-black text-slate-800">Token #4028 Generated & Priced!</h4>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Bar -->
+        <section class="border-y border-slate-100 bg-white/60 backdrop-blur py-8">
+            <div class="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div class="p-2">
+                    <h3 class="text-2xl sm:text-3xl font-black text-slate-950">100%</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Contactless Upload</p>
+                </div>
+                <div class="p-2">
+                    <h3 class="text-2xl sm:text-3xl font-black text-blue-600">Zero</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Extra Downloads Needed</p>
+                </div>
+                <div class="p-2">
+                    <h3 class="text-2xl sm:text-3xl font-black text-slate-950">Auto</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">PDF Page Counter</p>
+                </div>
+                <div class="p-2">
+                    <h3 class="text-2xl sm:text-3xl font-black text-emerald-600">Smart</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Token Queue System</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comprehensive Features Grid Section -->
+        <section id="features" class="py-20 sm:py-24 bg-slate-50 relative overflow-hidden">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <span class="bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full inline-block mb-3 shadow-sm">
+                        Advanced Shop Tools
+                    </span>
+                    <h2 class="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight">
+                        Aapki Dukaan Ke Liye <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Powerful Features</span>
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 relative">
+                    <!-- Feature 1 -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                        <div class="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-lg shadow-blue-600/30 group-hover:scale-110 transition-transform mb-6">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Counter QR Code</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Apna custom shop QR print karke counter par lagao. Customer bina kisi app download ke turant scan karke file bhej dega.</p>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-600/30 group-hover:scale-110 transition-transform mb-6">
+                            <i class="fas fa-cloud-download-alt"></i>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">No Phone Storage Full</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">WhatsApp ki tarah phone gallery ya PC me bematlab files download karke memory ful karne ki koi zaroorat nahi. Direct cloud stream print!</p>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-600/30 group-hover:scale-110 transition-transform mb-6">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Auto Page Counter</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">System PDF ke total pages locally detect kar leta hai aur aapke set kiye hue B&W ya Color rates ke hisaab se bill calculate karta hai.</p>
+                    </div>
+
+                    <!-- Feature 4 -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-600 text-white flex items-center justify-center text-xl shadow-lg shadow-amber-600/30 group-hover:scale-110 transition-transform mb-6">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Live Token Queue</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Rush hours me confusion bilkul nahi! Har order digital token number ke sath queue me arrange ho jata hai for quick printing.</p>
+                    </div>
+
+                    <!-- Feature 5 -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                        <div class="w-14 h-14 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-lg shadow-purple-600/30 group-hover:scale-110 transition-transform mb-6">
+                            <i class="fas fa-sliders-h"></i>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">Custom B&W / Color Rates</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Aap apni dukaan ke mutabiq per-page black & white aur color printing ke rates dashboard se kabhi bhi change kar sakte hain.</p>
+                    </div>
+
+                    <!-- Feature 6 -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                        <div class="w-14 h-14 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-lg shadow-rose-600/30 group-hover:scale-110 transition-transform mb-6">
+                            <i class="fas fa-eye-slash"></i>
+                        </div>
+                        <h3 class="font-extrabold text-xl text-slate-900 mb-3">"One View" Privacy Option</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">Customer agar chahe toh file ko 'One View' par set kar sakta hai, jisse print hone ke turant baad file secure cloud se delete ho jaye.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- OLD WAY VS. PRINTKARO WAY (Professional Comparison Section) -->
+        <section id="comparison" class="py-20 bg-white border-y border-slate-100">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <span class="bg-amber-50 border border-amber-100 text-amber-700 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full inline-block mb-3 shadow-sm">
+                        Farq Saaf Hai
+                    </span>
+                    <h2 class="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight">
+                        Purana Tareeka vs. <span class="text-blue-600">PrintKaro</span>
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Old Way -->
+                    <div class="bg-rose-50/50 border border-rose-100 rounded-3xl p-8 space-y-4">
+                        <div class="inline-flex items-center gap-2 bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1 rounded-full">
+                            <i class="fas fa-times-circle"></i> Purana Pareshani Wala Tareeka
+                        </div>
+                        <h3 class="text-xl font-black text-rose-950">Bin WhatsApp Ke Guzaara Nahi</h3>
+                        <ul class="space-y-3 text-sm text-slate-600 pt-2">
+                            <li class="flex items-start gap-2"><i class="fas fa-times text-rose-500 mt-1"></i> Customer bar-bar bolta hai "Bhaiya WhatsApp check karo".</li>
+                            <li class="flex items-start gap-2"><i class="fas fa-times text-rose-500 mt-1"></i> Phone gallery bematlab ki PDFs aur photos se bhar jati hai.</li>
+                            <li class="flex items-start gap-2"><i class="fas fa-times text-rose-500 mt-1"></i> PDF me kitne page hain, khud dimaag laga kar ginna padta hai.</li>
+                            <li class="flex items-start gap-2"><i class="fas fa-times text-rose-500 mt-1"></i> Kisne pehle file bheji thi, yaad rakhna mushkil ho jata hai.</li>
+                        </ul>
+                    </div>
+
+                    <!-- PrintKaro Way -->
+                    <div class="bg-emerald-50/50 border border-emerald-100 rounded-3xl p-8 space-y-4">
+                        <div class="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 font-bold text-xs px-3 py-1 rounded-full">
+                            <i class="fas fa-check-circle"></i> Smart PrintKaro System
+                        </div>
+                        <h3 class="text-xl font-black text-emerald-950">100% Automated & Clean</h3>
+                        <ul class="space-y-3 text-sm text-slate-700 pt-2">
+                            <li class="flex items-start gap-2"><i class="fas fa-check text-emerald-600 mt-1"></i> Seedha counter ka QR scan karo, chat ki zaroorat hi nahi.</li>
+                            <li class="flex items-start gap-2"><i class="fas fa-check text-emerald-600 mt-1"></i> Phone memory full nahi hoti, direct dashboard se print karo.</li>
+                            <li class="flex items-start gap-2"><i class="fas fa-check text-emerald-600 mt-1"></i> System khud pages gin kar total bill bata deta hai.</li>
+                            <li class="flex items-start gap-2"><i class="fas fa-check text-emerald-600 mt-1"></i> Token number ke hisaab se fatafat print nikaalo aur do!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FREQUENTLY ASKED QUESTIONS (FAQ Section) -->
+        <section class="py-20 bg-slate-50">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <span class="bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full inline-block mb-3 shadow-sm">
+                        Sawaal-Jawab
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
+                        Aapke Mann Me Uthne Wale Sawaal
+                    </h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-900 text-base mb-2"><i class="fas fa-question-circle text-blue-600 mr-2"></i> Kya customer ko koi app download karni padegi?</h4>
+                        <p class="text-slate-600 text-sm">Bilkul nahi! Customer sirf apne phone ke camera se aapka QR scan karega aur browser me hi file upload kar dega.</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-900 text-base mb-2"><i class="fas fa-question-circle text-blue-600 mr-2"></i> Kya mujhe phone me files download karne ki zaroorat hai?</h4>
+                        <p class="text-slate-600 text-sm">Bilkul nahi. Files aapke dashboard par direct show hongi jisse aap bina phone memory bhare ek click me print nikal sakte hain.</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-900 text-base mb-2"><i class="fas fa-question-circle text-blue-600 mr-2"></i> Main apne hisaab se print ke rate kaise set karunga?</h4>
+                        <p class="text-slate-600 text-sm">Dashboard me login karne ke baad upar 'Rates' ka button diya hai. Wahan aap B&W aur Color per-page ka rate apne hisaab se daal sakte hain.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
+
+    <!-- INLINE AUTH MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full relative shadow-2xl my-8">
+            <button onclick="closeAuthModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+
+            <!-- Tabs Switcher -->
+            <div id="authTabsHeader" class="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
+                <button id="loginTabBtn" onclick="switchAuthTab('login')" class="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition">Login</button>
+                <button id="registerTabBtn" onclick="switchAuthTab('register')" class="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition">Register Shop</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="loginFormContainer" class="space-y-4">
+                <h3 class="text-xl font-black text-slate-900">Welcome Back!</h3>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="loginEmail" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="shop@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="loginPass" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10" placeholder="••••••••">
+                        <button type="button" onclick="togglePasswordVisibility('loginPass', 'loginEyeIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i id="loginEyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <button onclick="switchAuthTab('forgot')" class="text-xs font-bold text-blue-600 hover:underline">Forgot Password?</button>
+                </div>
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm flex items-center justify-center gap-2">
+                    <span>Login to Dashboard</span>
+                </button>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="registerFormContainer" class="space-y-4 hidden max-h-[60vh] overflow-y-auto pr-1">
+                <h3 class="text-xl font-black text-slate-900">Create Shop Account</h3>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Shop Name</label>
+                    <input type="text" id="regShopName" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Sharma Xerox">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Number (10 Digits)</label>
+                    <input type="tel" id="regMobile" maxlength="10" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="9876543210">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Shop Address</label>
+                    <input type="text" id="regAddress" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Main Market, Near SBI Bank">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="regEmail" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="shop@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="regPass" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10" placeholder="••••••••">
+                        <button type="button" onclick="togglePasswordVisibility('regPass', 'regEyeIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i id="regEyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button id="registerBtn" onclick="handleRegister()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm mt-2 flex items-center justify-center gap-2">
+                    <span>Register & Launch Shop</span>
+                </button>
+            </div>
+
+            <!-- FORGOT PASSWORD FORM -->
+            <div id="forgotFormContainer" class="space-y-4 hidden">
+                <h3 class="text-xl font-black text-slate-900">Reset Password</h3>
+                <p class="text-xs text-slate-500">Enter your registered email address to retrieve or reset your password credentials.</p>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Registered Email Address</label>
+                    <input type="email" id="forgotEmail" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="shop@email.com">
+                </div>
+                <button onclick="handleForgotPassword()" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm">Send Account Details</button>
+                <div class="text-center pt-2">
+                    <button onclick="switchAuthTab('login')" class="text-xs font-bold text-slate-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i> Back to Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Professional Collapsible Footer -->
     <footer class="mt-auto bg-white border-t border-slate-200">
         <div class="max-w-4xl mx-auto p-6 text-center">
-            <button onclick="document.getElementById('contactPanel').classList.toggle('hidden')" class="text-xs font-bold text-slate-500 hover:text-blue-600 transition flex justify-center items-center gap-2 mx-auto">
+            <div class="mb-4 flex justify-between items-center px-4 flex-col sm:flex-row gap-2">
+                <div>
+                    <span class="text-lg font-black tracking-tighter text-slate-950">Print<span class="text-blue-600">Karo</span></span>
+                    <p class="text-xs text-slate-400 mt-0.5">&copy; 2026 PrintKaro. All rights reserved.</p>
+                </div>
+                <button onclick="openAuthModal('login')" class="text-xs font-bold text-blue-600 hover:underline">Shop Portal Login</button>
+            </div>
+
+            <button onclick="document.getElementById('contactPanel').classList.toggle('hidden')" class="w-full text-sm font-bold text-slate-500 hover:text-blue-600 transition flex justify-center items-center gap-2 pt-4 border-t border-slate-100">
                 CONTACT DEVELOPER <i class="fas fa-chevron-down"></i>
             </button>
             <div id="contactPanel" class="hidden mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <a href="https://www.linkedin.com/in/raushanabhishek" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 transition text-blue-600">
-                    <i class="fab fa-linkedin text-2xl mb-2"></i><p class="text-xs font-bold">LINKEDIN</p>
+                <!-- LinkedIn Link -->
+                <a href="https://www.linkedin.com/in/raushanabhishek" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 transition text-blue-600 block">
+                    <i class="fab fa-linkedin text-2xl mb-2"></i>
+                    <p class="text-xs font-bold">LINKEDIN</p>
                 </a>
-                <a href="https://wa.me/919508969439" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-emerald-50 transition text-emerald-600">
-                    <i class="fab fa-whatsapp text-2xl mb-2"></i><p class="text-xs font-bold">WHATSAPP</p>
+
+                <!-- WhatsApp Link -->
+                <a href="https://wa.me/919508969439" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-50 rounded-2xl hover:bg-emerald-50 transition text-emerald-600 block">
+                    <i class="fab fa-whatsapp text-2xl mb-2"></i>
+                    <p class="text-xs font-bold">WHATSAPP</p>
                 </a>
-                <a href="mailto:raushanabhishek95089@gmail.com" class="p-4 bg-slate-50 rounded-2xl hover:bg-red-50 transition text-red-600">
-                    <i class="fas fa-envelope text-2xl mb-2"></i><p class="text-xs font-bold">EMAIL</p>
+
+                <!-- Email Link -->
+                <a href="mailto:raushanabhishek95089@gmail.com" class="p-4 bg-slate-50 rounded-2xl hover:bg-red-50 transition text-red-600 block">
+                    <i class="fas fa-envelope text-2xl mb-2"></i>
+                    <p class="text-xs font-bold">EMAIL</p>
                 </a>
             </div>
         </div>
     </footer>
 
-    <!-- Customer Upload Logic -->
+    <!-- Script Logic -->
     <script>
         const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const shopSlug = urlParams.get('shop');
-
-        if (!shopSlug) {
-            alert("Invalid shop link! Please scan a valid shop QR code.");
-        } else {
-            document.getElementById('shopSubTitle').innerText = `Printing for Shop: ${shopSlug.split('_')[0].toUpperCase()}`;
+        function openAuthModal(mode) {
+            document.getElementById('authModal').classList.remove('hidden');
+            switchAuthTab(mode);
         }
 
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const files = e.target.files;
-            const container = document.getElementById('selectedFilesContainer');
-            container.innerHTML = "";
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
 
-            if(files.length > 0) {
-                container.classList.remove('hidden');
-                if(files.length === 1) {
-                    document.getElementById('fileLabel').innerText = files[0].name;
-                } else {
-                    document.getElementById('fileLabel').innerText = `${files.length} files selected`;
-                }
-                document.getElementById('fileLabel').classList.add('text-blue-600');
+        function switchAuthTab(mode) {
+            const loginTab = document.getElementById('loginTabBtn');
+            const regTab = document.getElementById('registerTabBtn');
+            const tabsHeader = document.getElementById('authTabsHeader');
 
-                for(let i=0; i<files.length; i++) {
-                    container.innerHTML += `<div class="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-100">
-                        <span class="font-bold text-slate-700 truncate max-w-[220px]"><i class="fas fa-file-alt text-blue-500 mr-1"></i> ${files[i].name}</span>
-                        <span class="text-slate-400 text-[10px]">${(files[i].size / 1024).toFixed(1)} KB</span>
-                    </div>`;
-                }
+            const loginForm = document.getElementById('loginFormContainer');
+            const regForm = document.getElementById('registerFormContainer');
+            const forgotForm = document.getElementById('forgotFormContainer');
+
+            loginForm.classList.add('hidden');
+            regForm.classList.add('hidden');
+            forgotForm.classList.add('hidden');
+            tabsHeader.classList.remove('hidden');
+
+            if(mode === 'login') {
+                loginTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-blue-600 text-white shadow-md transition";
+                regTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-500 hover:text-slate-900 transition";
+                loginForm.classList.remove('hidden');
+            } else if(mode === 'register') {
+                regTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-blue-600 text-white shadow-md transition";
+                loginTab.className = "flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-500 hover:text-slate-900 transition";
+                regForm.classList.remove('hidden');
+            } else if(mode === 'forgot') {
+                tabsHeader.classList.add('hidden');
+                forgotForm.classList.remove('hidden');
+            }
+        }
+
+        function togglePasswordVisibility(fieldId, iconId) {
+            const passwordField = document.getElementById(fieldId);
+            const eyeIcon = document.getElementById(iconId);
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
             } else {
-                container.classList.add('hidden');
-                document.getElementById('fileLabel').innerText = "Tap to Select Files (Multiple allowed)";
-                document.getElementById('fileLabel').classList.remove('text-blue-600');
-            }
-        });
-
-        function resetUpload() {
-            document.getElementById('fileInput').value = "";
-            document.getElementById('oneViewCheck').checked = false;
-            document.querySelector('input[name="printType"][value="bw"]').checked = true;
-            document.getElementById('tokenDisplay').classList.add('hidden');
-            document.getElementById('uploadUI').classList.remove('hidden');
-            document.getElementById('selectedFilesContainer').classList.add('hidden');
-            document.getElementById('selectedFilesContainer').innerHTML = "";
-            document.getElementById('fileLabel').innerText = "Tap to Select Files (Multiple allowed)";
-            document.getElementById('fileLabel').classList.remove('text-blue-600');
-            document.getElementById('uploadBtn').disabled = false;
-            document.getElementById('uploadBtn').innerText = "Upload & Get Token";
-        }
-
-        async function getPdfPageCount(file) {
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                return pdf.numPages;
-            } catch (error) {
-                console.error("Error reading PDF pages:", error);
-                return 1;
+                passwordField.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
             }
         }
 
-        async function uploadFiles() {
-            const fileInput = document.getElementById('fileInput');
-            const isOneView = document.getElementById('oneViewCheck').checked;
-            const printType = document.querySelector('input[name="printType"]:checked').value;
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
 
-            if (!shopSlug) return alert("Invalid shop reference!");
-            if (!fileInput.files || fileInput.files.length === 0) return alert("Please select at least one file first!");
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const btn = document.getElementById('loginBtn');
 
-            const btn = document.getElementById('uploadBtn');
+            if(!email || !pass) return alert("Please fill in all fields!");
+            if(!isValidEmail(email)) return alert("Please enter a valid email address!");
+
             btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Logging in...`;
 
-            try {
-                let bwRate = 2.00;
-                let colorRate = 10.00;
+            const { data, error } = await supabaseClient
+                .from('shops')
+                .select('*')
+                .eq('email', email)
+                .eq('password', pass)
+                .single();
 
-                const { data: shopData } = await supabaseClient
-                    .from('shops')
-                    .select('bw_rate, color_rate')
-                    .eq('shop_slug', shopSlug)
-                    .single();
-
-                if (shopData) {
-                    if (shopData.bw_rate !== null) bwRate = parseFloat(shopData.bw_rate);
-                    if (shopData.color_rate !== null) colorRate = parseFloat(shopData.color_rate);
-                }
-
-                const token = "#" + Math.floor(1000 + Math.random() * 9000);
-                const files = fileInput.files;
-                let grandTotalPrice = 0;
-
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    let filePages = 1;
-
-                    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) {
-                        btn.innerText = `Reading PDF (${i+1}/${files.length})...`;
-                        filePages = await getPdfPageCount(file);
-                    } else {
-                        filePages = 1;
-                    }
-
-                    const ratePerUnit = (printType === 'color') ? colorRate : bwRate;
-                    const filePrice = filePages * ratePerUnit;
-                    grandTotalPrice += filePrice;
-
-                    const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
-                    const fileName = Date.now() + "_" + cleanName;
-
-                    btn.innerText = `Uploading (${i+1}/${files.length})...`;
-
-                    const { error: uploadError } = await supabaseClient.storage.from('print_files').upload(fileName, file);
-                    if (uploadError) throw new Error("Storage upload failed: " + uploadError.message);
-
-                    const { data: urlData } = supabaseClient.storage.from('print_files').getPublicUrl(fileName);
-
-                    const { error: dbError } = await supabaseClient.from('print_jobs').insert([{
-                        token_number: token,
-                        file_name: fileName,
-                        file_url: urlData.publicUrl,
-                        shop_slug: shopSlug,
-                        is_one_view: isOneView,
-                        print_type: printType,
-                        total_pages: filePages,
-                        total_price: filePrice
-                    }]);
-
-                    if (dbError) throw new Error("Database insert failed: " + dbError.message);
-                }
-
-                document.getElementById('uploadUI').classList.add('hidden');
-                document.getElementById('tokenDisplay').classList.remove('hidden');
-                document.getElementById('tokenNumber').innerText = token;
-                document.getElementById('priceSummary').innerText = `Total Estimated Price: ₹${grandTotalPrice.toFixed(2)}`;
-            } catch (err) {
-                alert("Upload failed! Error: " + err.message);
-                btn.innerText = "Upload & Get Token";
+            if(error || !data) {
+                alert("Invalid email or password!");
                 btn.disabled = false;
+                btn.innerHTML = `<span>Login to Dashboard</span>`;
+            } else {
+                localStorage.setItem('shopSlug', data.shop_slug);
+                localStorage.setItem('shopName', data.shop_name);
+                window.location.href = 'dashboard.html?shop=' + data.shop_slug;
+            }
+        }
+
+        async function handleRegister() {
+            const shopName = document.getElementById('regShopName').value.trim();
+            const mobileNumber = document.getElementById('regMobile').value.trim();
+            const address = document.getElementById('regAddress').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+            const btn = document.getElementById('registerBtn');
+
+            if(!shopName || !mobileNumber || !address || !email || !pass) {
+                return alert("Please fill all fields!");
+            }
+            if(!isValidEmail(email)) {
+                return alert("Please enter a valid email address!");
+            }
+            if(mobileNumber.length !== 10 || isNaN(mobileNumber)) {
+                return alert("Please enter a valid 10-digit mobile number!");
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Registering Shop...`;
+
+            const shopSlug = shopName.toLowerCase().replace(/[^a-z0-9]/g, '_') + "_" + Math.floor(100 + Math.random() * 900);
+
+            const { error } = await supabaseClient.from('shops').insert([{
+                shop_name: shopName,
+                email: email,
+                password: pass,
+                shop_slug: shopSlug,
+                mobile_number: mobileNumber,
+                address: address,
+                bw_rate: 0.00,
+                color_rate: 0.00
+            }]);
+
+            if(error) {
+                alert("Registration failed: " + error.message);
+                btn.disabled = false;
+                btn.innerHTML = `<span>Register & Launch Shop</span>`;
+            } else {
+                localStorage.setItem('shopSlug', shopSlug);
+                localStorage.setItem('shopName', shopName);
+                localStorage.setItem('isFirstLogin', 'true');
+                window.location.href = 'dashboard.html?shop=' + shopSlug;
+            }
+        }
+
+        async function handleForgotPassword() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            if(!email || !isValidEmail(email)) return alert("Please enter a valid registered email address!");
+
+            const { data, error } = await supabaseClient
+                .from('shops')
+                .select('shop_name, password')
+                .eq('email', email)
+                .single();
+
+            if(error || !data) {
+                alert("No shop account found with this email address.");
+            } else {
+                alert(`Account found for "${data.shop_name}"!\nYour current password is: ${data.password}`);
+                switchAuthTab('login');
             }
         }
     </script>

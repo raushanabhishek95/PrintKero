@@ -99,15 +99,15 @@
 
         <!-- Player Controls -->
         <div class="flex items-center gap-2">
-            <button onclick="prevTrack()" class="w-8 h-8 bg-amber-900/80 text-amber-200 rounded-full flex items-center justify-center text-xs hover:bg-amber-800 cursor-pointer shadow" title="Previous">⏮</button>
+            <button onclick="changeTrack()" class="w-8 h-8 bg-amber-900/80 text-amber-200 rounded-full flex items-center justify-center text-xs hover:bg-amber-800 cursor-pointer shadow" title="Previous">⏮</button>
             <button onclick="togglePlay()" id="floatingPlayBtn" class="w-10 h-10 bg-amber-500 text-black font-extrabold rounded-full flex items-center justify-center text-sm hover:bg-amber-400 cursor-pointer shadow-lg">▶</button>
-            <button onclick="nextTrack()" class="w-8 h-8 bg-amber-900/80 text-amber-200 rounded-full flex items-center justify-center text-xs hover:bg-amber-800 cursor-pointer shadow" title="Next">⏭</button>
+            <button onclick="changeTrack()" class="w-8 h-8 bg-amber-900/80 text-amber-200 rounded-full flex items-center justify-center text-xs hover:bg-amber-800 cursor-pointer shadow" title="Next">⏭</button>
             <button onclick="closeMusicPlayer()" class="w-6 h-6 bg-red-600/90 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-500 ml-1 cursor-pointer shadow" title="Close Popup">✕</button>
         </div>
     </div>
 
-    <!-- Hidden YouTube API Player Container -->
-    <div id="youtube-player" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></div>
+    <!-- Hidden YouTube Audio Stream Container -->
+    <div id="playerContainer"></div>
 
     <!-- Professional Collapsible Footer -->
     <footer class="mt-auto bg-white border-t border-slate-200">
@@ -351,44 +351,25 @@
             }
         }
 
-        // YouTube Iframe Player API Integration for Dashboard Floating Player
-        let player;
+        // Dashboard Dynamic Shuffle Music Logic
         let isPlaying = false;
         const playlistId = "RDATli";
 
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtube-player', {
-                height: '0',
-                width: '0',
-                playerVars: {
-                    'listType': 'playlist',
-                    'list': playlistId,
-                    'autoplay': 0,
-                    'shuffle': 1,
-                    'enablejsapi': 1
-                },
-                events: {
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-
-        function onPlayerStateChange(event) {
+        function togglePlay() {
+            const container = document.getElementById('playerContainer');
             const playBtn = document.getElementById('floatingPlayBtn');
             const statusText = document.getElementById('floatingStatus');
             const floatingVinyl = document.getElementById('floatingVinyl');
 
-            if (event.data == YT.PlayerState.PLAYING) {
+            if (!isPlaying) {
+                const randomSeed = new Date().getTime();
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1&t=${randomSeed}" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
                 playBtn.innerText = "⏸";
                 statusText.innerText = "Playing Retro Beats...";
                 floatingVinyl.classList.remove('paused');
                 isPlaying = true;
-            } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
+            } else {
+                container.innerHTML = "";
                 playBtn.innerText = "▶";
                 statusText.innerText = "Player Paused";
                 floatingVinyl.classList.add('paused');
@@ -396,44 +377,23 @@
             }
         }
 
-        function togglePlay() {
-            if (!player) return;
-            const statusText = document.getElementById('floatingStatus');
-            if (!isPlaying) {
-                statusText.innerText = "Loading...";
-                player.playVideo();
-            } else {
-                player.pauseVideo();
-            }
-        }
-
-        function nextTrack() {
-            if (player && typeof player.nextVideo === 'function') {
+        function changeTrack() {
+            if (isPlaying) {
+                const container = document.getElementById('playerContainer');
                 const statusText = document.getElementById('floatingStatus');
                 statusText.innerText = "Switching Track...";
-                player.nextVideo();
+                const randomSeed = new Date().getTime();
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1&t=${randomSeed}" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
                 setTimeout(() => {
-                    statusText.innerText = "Playing Retro Beats...";
-                }, 800);
-            }
-        }
-
-        function prevTrack() {
-            if (player && typeof player.previousVideo === 'function') {
-                const statusText = document.getElementById('floatingStatus');
-                statusText.innerText = "Switching Track...";
-                player.previousVideo();
-                setTimeout(() => {
-                    statusText.innerText = "Playing Retro Beats...";
-                }, 800);
+                    if(isPlaying) statusText.innerText = "Playing Retro Beats...";
+                }, 1000);
             }
         }
 
         function closeMusicPlayer() {
             const playerBar = document.getElementById('floatingMusicPlayer');
-            if (player && typeof player.stopVideo === 'function') {
-                player.stopVideo();
-            }
+            const container = document.getElementById('playerContainer');
+            container.innerHTML = "";
             playerBar.style.display = 'none';
             isPlaying = false;
         }

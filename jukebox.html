@@ -28,8 +28,8 @@
         <h1 class="text-amber-200 font-bold text-lg tracking-wider drop-shadow">🎵 PrintKaro Cyber Songs</h1>
     </div>
 
-    <!-- Hidden YouTube API Player Container -->
-    <div id="youtube-player" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></div>
+    <!-- Hidden YouTube Audio Stream Container -->
+    <div id="playerContainer"></div>
 
     <!-- Center Vinyl Record Player Console -->
     <div class="relative flex flex-col items-center justify-center bg-amber-950/90 backdrop-blur-xl p-8 rounded-3xl border-2 border-amber-500/50 shadow-2xl z-10 max-w-md w-full text-center">
@@ -46,9 +46,9 @@
         <p id="statusText" class="text-amber-300 font-extrabold text-xl mb-1 tracking-wide">Player Paused</p>
         <p class="text-amber-400/70 text-xs mb-6">Non-stop 90s Retro Beats (Ad-Free Stream)</p>
 
-        <!-- Player Controls (Prev, Play/Pause, Next) -->
+        <!-- Player Controls -->
         <div class="flex items-center gap-6">
-            <button onclick="prevTrack()" class="w-12 h-12 flex items-center justify-center bg-amber-900/80 text-amber-200 rounded-full hover:bg-amber-800 active:scale-95 transition font-bold shadow-lg cursor-pointer border border-amber-600/50" title="Previous Track">
+            <button onclick="changeTrack()" class="w-12 h-12 flex items-center justify-center bg-amber-900/80 text-amber-200 rounded-full hover:bg-amber-800 active:scale-95 transition font-bold shadow-lg cursor-pointer border border-amber-600/50" title="Previous Track">
                 ⏮
             </button>
 
@@ -56,7 +56,7 @@
                 ▶
             </button>
 
-            <button onclick="nextTrack()" class="w-12 h-12 flex items-center justify-center bg-amber-900/80 text-amber-200 rounded-full hover:bg-amber-800 active:scale-95 transition font-bold shadow-lg cursor-pointer border border-amber-600/50" title="Next Track">
+            <button onclick="changeTrack()" class="w-12 h-12 flex items-center justify-center bg-amber-900/80 text-amber-200 rounded-full hover:bg-amber-800 active:scale-95 transition font-bold shadow-lg cursor-pointer border border-amber-600/50" title="Next Track">
                 ⏭
             </button>
         </div>
@@ -67,46 +67,25 @@
         Powered by PrintKaro Cyber Lounge System
     </div>
 
-    <!-- YouTube IFrame Player API Script -->
     <script>
-        let player;
         let isPlaying = false;
         const playlistId = "RDATli";
 
-        // Load YouTube API asynchronously
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtube-player', {
-                height: '0',
-                width: '0',
-                playerVars: {
-                    'listType': 'playlist',
-                    'list': playlistId,
-                    'autoplay': 0,
-                    'shuffle': 1,
-                    'enablejsapi': 1
-                },
-                events: {
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-
-        function onPlayerStateChange(event) {
+        function togglePlay() {
+            const container = document.getElementById('playerContainer');
             const playBtn = document.getElementById('playBtn');
             const statusText = document.getElementById('statusText');
             const vinylDisk = document.getElementById('vinylDisk');
 
-            if (event.data == YT.PlayerState.PLAYING) {
+            if (!isPlaying) {
+                const randomSeed = new Date().getTime();
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1&t=${randomSeed}" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
                 playBtn.innerText = "⏸";
                 statusText.innerText = "Playing Retro Beats...";
                 vinylDisk.classList.remove('paused');
                 isPlaying = true;
-            } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
+            } else {
+                container.innerHTML = "";
                 playBtn.innerText = "▶";
                 statusText.innerText = "Player Paused";
                 vinylDisk.classList.add('paused');
@@ -114,37 +93,18 @@
             }
         }
 
-        function togglePlay() {
-            if (!player) return;
-            const statusText = document.getElementById('statusText');
-
-            if (!isPlaying) {
-                statusText.innerText = "Loading...";
-                player.playVideo();
-            } else {
-                player.pauseVideo();
-            }
-        }
-
-        function nextTrack() {
-            if (player && typeof player.nextVideo === 'function') {
+        function changeTrack() {
+            if (isPlaying) {
+                const container = document.getElementById('playerContainer');
                 const statusText = document.getElementById('statusText');
-                statusText.innerText = "Switching Track...";
-                player.nextVideo();
-                setTimeout(() => {
-                    statusText.innerText = "Playing Retro Beats...";
-                }, 800);
-            }
-        }
 
-        function prevTrack() {
-            if (player && typeof player.previousVideo === 'function') {
-                const statusText = document.getElementById('statusText');
                 statusText.innerText = "Switching Track...";
-                player.previousVideo();
+                const randomSeed = new Date().getTime();
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1&t=${randomSeed}" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
+
                 setTimeout(() => {
-                    statusText.innerText = "Playing Retro Beats...";
-                }, 800);
+                    if(isPlaying) statusText.innerText = "Playing Retro Beats...";
+                }, 1000);
             }
         }
     </script>

@@ -12,15 +12,24 @@
     <style>
         .fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spinSlow 8s linear infinite;
+        }
+        .paused {
+            animation-play-state: paused;
+        }
     </style>
 </head>
-<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800">
+<body class="bg-slate-50 flex flex-col min-h-screen font-sans text-slate-800 pb-24">
 
     <!-- Navbar -->
     <nav class="bg-blue-700 text-white p-4 shadow-lg flex justify-between items-center">
         <h1 class="text-2xl font-black tracking-tighter">Print<span class="text-blue-200">Karo</span> <span class="text-xs font-medium text-blue-100 ml-2 uppercase tracking-widest">Dashboard</span></h1>
         <div class="flex items-center gap-3">
-            <!-- Song Button -->
             <a href="jukebox.html" class="text-sm font-bold flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg transition shadow">
                 <i class="fas fa-music"></i> Song
             </a>
@@ -75,6 +84,30 @@
             <div id="printedList" class="space-y-3"></div>
         </div>
     </main>
+
+    <!-- Persistent Floating Bottom Music Popup -->
+    <div id="floatingMusicPlayer" class="fixed bottom-4 right-4 bg-amber-950/95 border-2 border-amber-500/60 backdrop-blur-md text-white p-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-4 max-w-sm w-full transition-all duration-300">
+        <!-- Spinning Vinyl Mini Icon -->
+        <div class="w-10 h-10 rounded-full border-2 border-amber-500 bg-black flex items-center justify-center relative shadow-inner">
+            <div id="floatingVinyl" class="w-4 h-4 bg-amber-500 rounded-full animate-spin-slow paused"></div>
+        </div>
+
+        <div class="flex-grow">
+            <p class="text-xs font-bold text-amber-300">🎵 PrintKaro Cyber Beats</p>
+            <p id="floatingStatus" class="text-[10px] text-amber-400/80">Player Paused</p>
+        </div>
+
+        <!-- Player Controls -->
+        <div class="flex items-center gap-2">
+            <button onclick="prevTrack()" class="w-8 h-8 bg-amber-900/80 text-amber-200 rounded-full flex items-center justify-center text-xs hover:bg-amber-800 cursor-pointer shadow" title="Previous">⏮</button>
+            <button onclick="togglePlay()" id="floatingPlayBtn" class="w-10 h-10 bg-amber-500 text-black font-extrabold rounded-full flex items-center justify-center text-sm hover:bg-amber-400 cursor-pointer shadow-lg">▶</button>
+            <button onclick="nextTrack()" class="w-8 h-8 bg-amber-900/80 text-amber-200 rounded-full flex items-center justify-center text-xs hover:bg-amber-800 cursor-pointer shadow" title="Next">⏭</button>
+            <button onclick="closeMusicPlayer()" class="w-6 h-6 bg-red-600/90 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-500 ml-1 cursor-pointer shadow" title="Close Popup">✕</button>
+        </div>
+    </div>
+
+    <!-- Hidden YouTube API Player Container -->
+    <div id="youtube-player" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></div>
 
     <!-- Professional Collapsible Footer -->
     <footer class="mt-auto bg-white border-t border-slate-200">
@@ -173,9 +206,7 @@
 
             const qrWindow = window.open('', '_blank', 'width=900,height=950');
             qrWindow.document.write(
-                '<html>' +
-                '<head>' +
-                '<title>' + displayShopName + ' PrintKaro QR</title>' +
+                '<html><head><title>' + displayShopName + ' PrintKaro QR</title>' +
                 '<style>' +
                 '@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap");' +
                 'body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: "Inter", sans-serif; background: #f1f5f9; -webkit-print-color-adjust: exact; }' +
@@ -192,31 +223,19 @@
                 '.print-btn { margin-top: 20px; padding: 14px; width: 100%; background: #2563eb; color: white; border: none; border-radius: 14px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.4); }' +
                 '.print-btn:hover { background: #1d4ed8; }' +
                 '@media print { body { background: white; } .print-btn { display: none; } .card { border: 2px solid #000; box-shadow: none; } }' +
-                '</style>' +
-                '</head>' +
-                '<body>' +
-                '<div style="text-align: center;">' +
-                '<div class="card">' +
+                '</style></head><body><div style="text-align: center;"><div class="card">' +
                 '<div class="badge">⚡ Instant Wireless Printing</div>' +
                 '<h1>' + displayShopName + '</h1>' +
                 '<p class="subtitle">Scan QR code with your phone camera to send files instantly</p>' +
-                '<div class="qr-box">' +
-                '<img src="' + googleQRUrl + '" alt="Shop QR Code">' +
-                '</div>' +
+                '<div class="qr-box"><img src="' + googleQRUrl + '" alt="Shop QR Code"></div>' +
                 '<div class="instruction-box">' +
                 '<p>📱 1. Scan QR code using phone camera</p>' +
                 '<p>📄 2. Select PDF or Photo & Choose B&W/Color</p>' +
                 '<p>🎫 3. Get Token & Show at Counter</p>' +
                 '</div>' +
                 '<div class="footer-brand">Powered by <span>PrintKaro</span></div>' +
-                '</div>' +
-                '<button class="print-btn" onclick="window.print()">🖨️ Print Counter Standee</button>' +
-                '</div>' +
-                '<script>' +
-                'window.onload = function() { setTimeout(function() { window.focus(); }, 500); };' +
-                '<\/script>' +
-                '</body>' +
-                '</html>'
+                '</div><button class="print-btn" onclick="window.print()">🖨️ Print Counter Standee</button></div>' +
+                '<script>window.onload = function() { setTimeout(function() { window.focus(); }, 500); };<\/script></body></html>'
             );
             qrWindow.document.close();
         }
@@ -236,8 +255,7 @@
                         '@page { size: portrait; margin: 0; }' +
                         'body, html { width: 100%; height: 100%; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: #fff; overflow: hidden; }' +
                         'img { max-width: 100%; max-height: 92vh; width: auto; height: auto; object-fit: contain; display: block; }' +
-                        '</style></head>' +
-                        '<body><img src="' + fileUrl + '" onload="window.focus(); window.print();" /></body></html>'
+                        '</style></head><body><img src="' + fileUrl + '" onload="window.focus(); window.print();" /></body></html>'
                     );
                 }
                 printWindow.document.close();
@@ -246,19 +264,8 @@
 
         async function markAsPrinted(id, fileUrl, isOneView) {
             openFileForPrint(fileUrl);
-
-            const { error } = await supabaseClient
-                .from('print_jobs')
-                .update({
-                    status: 'printed',
-                    printed_at: new Date().toISOString()
-                })
-                .eq('id', id);
-
-            if (!error) {
-                fetchPrintJobs();
-            }
-
+            const { error } = await supabaseClient.from('print_jobs').update({ status: 'printed', printed_at: new Date().toISOString() }).eq('id', id);
+            if (!error) { fetchPrintJobs(); }
             if (isOneView) {
                 setTimeout(async () => {
                     try {
@@ -268,9 +275,7 @@
                             const filePath = decodeURIComponent(pathSegments[1]);
                             await supabaseClient.storage.from('print_files').remove([filePath]);
                         }
-                    } catch (err) {
-                        console.error("Delayed delete exception:", err);
-                    }
+                    } catch (err) { console.error("Delayed delete exception:", err); }
                 }, 5000);
             }
         }
@@ -278,14 +283,7 @@
         async function autoCleanOldPrintedJobs() {
             try {
                 const fiveMinutesAgo = new Date(new Date().getTime() - (5 * 60 * 1000)).toISOString();
-
-                const { data: oldJobs, error: fetchError } = await supabaseClient
-                    .from('print_jobs')
-                    .select('id, file_url')
-                    .eq('shop_slug', shopSlug)
-                    .eq('status', 'printed')
-                    .lt('printed_at', fiveMinutesAgo);
-
+                const { data: oldJobs } = await supabaseClient.from('print_jobs').select('id, file_url').eq('shop_slug', shopSlug).eq('status', 'printed').lt('printed_at', fiveMinutesAgo);
                 if (oldJobs && oldJobs.length > 0) {
                     for (const job of oldJobs) {
                         try {
@@ -295,129 +293,149 @@
                                 const filePath = decodeURIComponent(pathSegments[1]);
                                 await supabaseClient.storage.from('print_files').remove([filePath]);
                             }
-                        } catch (err) {
-                            console.error("Storage delete error for job:", job.id, err);
-                        }
+                        } catch (err) { console.error("Storage delete error:", err); }
                     }
-
-                    await supabaseClient
-                        .from('print_jobs')
-                        .delete()
-                        .eq('shop_slug', shopSlug)
-                        .eq('status', 'printed')
-                        .lt('printed_at', fiveMinutesAgo);
+                    await supabaseClient.from('print_jobs').delete().eq('shop_slug', shopSlug).eq('status', 'printed').lt('printed_at', fiveMinutesAgo);
                 }
-            } catch (e) {
-                console.error("Auto clean error:", e);
-            }
+            } catch (e) { console.error("Auto clean error:", e); }
         }
 
         async function fetchPrintJobs() {
             await autoCleanOldPrintedJobs();
-
             const { data } = await supabaseClient.from('print_jobs').select('*').eq('shop_slug', shopSlug).order('id', { ascending: false });
             const pList = document.getElementById('pendingList'), hList = document.getElementById('printedList');
             pList.innerHTML = ""; hList.innerHTML = "";
-
             if(data) {
                 const tokenTotals = {};
                 data.forEach(j => {
-                    if (!tokenTotals[j.token_number]) {
-                        tokenTotals[j.token_number] = { totalAmount: 0, totalFiles: 0, totalPages: 0 };
-                    }
+                    if (!tokenTotals[j.token_number]) { tokenTotals[j.token_number] = { totalAmount: 0, totalFiles: 0, totalPages: 0 }; }
                     tokenTotals[j.token_number].totalAmount += (j.total_price || 0);
                     tokenTotals[j.token_number].totalFiles += 1;
                     tokenTotals[j.token_number].totalPages += (j.total_pages || 1);
                 });
-
                 const pendingJobs = data.filter(j => j.status !== 'printed');
                 const printedJobs = data.filter(j => j.status === 'printed');
-
                 const tokenGroups = {};
-                pendingJobs.forEach(j => {
-                    if (!tokenGroups[j.token_number]) {
-                        tokenGroups[j.token_number] = [];
-                    }
-                    tokenGroups[j.token_number].push(j);
-                });
-
+                pendingJobs.forEach(j => { if (!tokenGroups[j.token_number]) { tokenGroups[j.token_number] = []; } tokenGroups[j.token_number].push(j); });
                 const printedTokenGroups = {};
-                printedJobs.forEach(j => {
-                    if (!printedTokenGroups[j.token_number]) {
-                        printedTokenGroups[j.token_number] = [];
-                    }
-                    printedTokenGroups[j.token_number].push(j);
-                });
+                printedJobs.forEach(j => { if (!printedTokenGroups[j.token_number]) { printedTokenGroups[j.token_number] = []; } printedTokenGroups[j.token_number].push(j); });
 
-                // Render Pending Token Cards
                 Object.keys(tokenGroups).forEach(token => {
                     const groupJobs = tokenGroups[token];
                     const fixedTotalAmount = tokenTotals[token].totalAmount;
                     const totalFilesCount = tokenTotals[token].totalFiles;
                     const totalPagesCount = tokenTotals[token].totalPages;
                     let fileItemsHtml = "";
-
                     groupJobs.forEach(j => {
                         const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';
                         const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
-
-                        fileItemsHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-none gap-2">
-                            <div class="truncate pr-2">
-                                <p class="font-bold text-xs text-slate-700 truncate">${j.file_name.substring(14)}</p>
-                                <div class="flex items-center gap-1 mt-0.5">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">• ${j.total_pages || 1} Pages (₹${(j.total_price || 0).toFixed(2)})</span></div>
-                            </div>
-                            <button onclick="markAsPrinted(${j.id}, '${j.file_url}', ${j.is_one_view})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition shadow-sm">PRINT</button>
-                        </div>`;
+                        fileItemsHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-none gap-2"><div class="truncate pr-2"><p class="font-bold text-xs text-slate-700 truncate">${j.file_name.substring(14)}</p><div class="flex items-center gap-1 mt-0.5">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">• ${j.total_pages || 1} Pages (₹${(j.total_price || 0).toFixed(2)})</span></div></div><button onclick="markAsPrinted(${j.id}, '${j.file_url}', ${j.is_one_view})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition shadow-sm">PRINT</button></div>`;
                     });
-
-                    pList.innerHTML += `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
-                            <span class="text-xs font-black bg-blue-600 text-white px-2.5 py-1 rounded-lg">TOKEN ${token}</span>
-                            <div class="text-right">
-                                <span class="text-xs font-bold text-slate-500 block">${totalFilesCount} Files (${totalPagesCount} Pages)</span>
-                                <span class="text-sm font-black text-emerald-600">Total Bill: ₹${fixedTotalAmount.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div class="space-y-1">${fileItemsHtml}</div>
-                    </div>`;
+                    pList.innerHTML += `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3"><div class="flex justify-between items-center pb-2 border-b border-slate-200"><span class="text-xs font-black bg-blue-600 text-white px-2.5 py-1 rounded-lg">TOKEN ${token}</span><div class="text-right"><span class="text-xs font-bold text-slate-500 block">${totalFilesCount} Files (${totalPagesCount} Pages)</span><span class="text-sm font-black text-emerald-600">Total Bill: ₹${fixedTotalAmount.toFixed(2)}</span></div></div><div class="space-y-1">${fileItemsHtml}</div></div>`;
                 });
 
-                // Render Printed History Token Cards
                 Object.keys(printedTokenGroups).forEach(token => {
                     const groupJobs = printedTokenGroups[token];
                     const fixedTotalAmount = tokenTotals[token].totalAmount;
                     const totalFilesCount = tokenTotals[token].totalFiles;
                     let fileItemsHtml = "";
-
                     groupJobs.forEach(j => {
                         const typeBadge = (j.print_type === 'color') ? '<span class="text-[9px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded ml-1">Color</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-1">B&W</span>';
                         const oneViewBadge = j.is_one_view ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded ml-1">One View</span>' : '';
-
                         let reprintBtn = !j.is_one_view ? `<button onclick="openFileForPrint('${j.file_url}')" class="text-[10px] font-bold text-blue-600 hover:underline">Reprint</button>` : '<span class="text-[10px] text-slate-400">Expired</span>';
-
-                        fileItemsHtml += `<div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-none text-xs">
-                            <div class="truncate pr-2">
-                                <span class="font-medium text-slate-700 truncate">${j.file_name.substring(14)}</span>
-                                <div class="flex items-center gap-1">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">₹${(j.total_price || 0).toFixed(2)}</span></div>
-                            </div>
-                            <div>${reprintBtn}</div>
-                        </div>`;
+                        fileItemsHtml += `<div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-none text-xs"><div class="truncate pr-2"><span class="font-medium text-slate-700 truncate">${j.file_name.substring(14)}</span><div class="flex items-center gap-1">${typeBadge}${oneViewBadge} <span class="text-[10px] text-slate-400">₹${(j.total_price || 0).toFixed(2)}</span></div></div><div>${reprintBtn}</div></div>`;
                     });
-
-                    hList.innerHTML += `<div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-2">
-                        <div class="flex justify-between items-center pb-2 border-b border-emerald-100">
-                            <span class="text-xs font-black bg-emerald-600 text-white px-2.5 py-1 rounded-lg">TOKEN ${token}</span>
-                            <div class="text-right">
-                                <span class="text-xs font-bold text-slate-600 block">${totalFilesCount} Files Printed</span>
-                                <span class="text-sm font-black text-emerald-700">Total: ₹${fixedTotalAmount.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div class="space-y-1">${fileItemsHtml}</div>
-                    </div>`;
+                    hList.innerHTML += `<div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-2"><div class="flex justify-between items-center pb-2 border-b border-emerald-100"><span class="text-xs font-black bg-emerald-600 text-white px-2.5 py-1 rounded-lg">TOKEN ${token}</span><div class="text-right"><span class="text-xs font-bold text-slate-600 block">${totalFilesCount} Files Printed</span><span class="text-sm font-black text-emerald-700">Total: ₹${fixedTotalAmount.toFixed(2)}</span></div></div><div class="space-y-1">${fileItemsHtml}</div></div>`;
                 });
-
                 document.getElementById('fileCount').innerText = Object.keys(tokenGroups).length + ' Orders';
             }
+        }
+
+        // YouTube Iframe Player API Integration for Dashboard Floating Player
+        let player;
+        let isPlaying = false;
+        const playlistId = "RDATli";
+
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                height: '0',
+                width: '0',
+                playerVars: {
+                    'listType': 'playlist',
+                    'list': playlistId,
+                    'autoplay': 0,
+                    'shuffle': 1,
+                    'enablejsapi': 1
+                },
+                events: {
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerStateChange(event) {
+            const playBtn = document.getElementById('floatingPlayBtn');
+            const statusText = document.getElementById('floatingStatus');
+            const floatingVinyl = document.getElementById('floatingVinyl');
+
+            if (event.data == YT.PlayerState.PLAYING) {
+                playBtn.innerText = "⏸";
+                statusText.innerText = "Playing Retro Beats...";
+                floatingVinyl.classList.remove('paused');
+                isPlaying = true;
+            } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
+                playBtn.innerText = "▶";
+                statusText.innerText = "Player Paused";
+                floatingVinyl.classList.add('paused');
+                isPlaying = false;
+            }
+        }
+
+        function togglePlay() {
+            if (!player) return;
+            const statusText = document.getElementById('floatingStatus');
+            if (!isPlaying) {
+                statusText.innerText = "Loading...";
+                player.playVideo();
+            } else {
+                player.pauseVideo();
+            }
+        }
+
+        function nextTrack() {
+            if (player && typeof player.nextVideo === 'function') {
+                const statusText = document.getElementById('floatingStatus');
+                statusText.innerText = "Switching Track...";
+                player.nextVideo();
+                setTimeout(() => {
+                    statusText.innerText = "Playing Retro Beats...";
+                }, 800);
+            }
+        }
+
+        function prevTrack() {
+            if (player && typeof player.previousVideo === 'function') {
+                const statusText = document.getElementById('floatingStatus');
+                statusText.innerText = "Switching Track...";
+                player.previousVideo();
+                setTimeout(() => {
+                    statusText.innerText = "Playing Retro Beats...";
+                }, 800);
+            }
+        }
+
+        function closeMusicPlayer() {
+            const playerBar = document.getElementById('floatingMusicPlayer');
+            if (player && typeof player.stopVideo === 'function') {
+                player.stopVideo();
+            }
+            playerBar.style.display = 'none';
+            isPlaying = false;
         }
 
         function logoutShop() {

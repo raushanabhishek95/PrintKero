@@ -94,8 +94,8 @@
 
     <!-- SCRIPT LOGIC -->
     <script>
-        const SUPABASE_URL = 'https://xcoxiqlbhpuvlhqokol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhjb3hpcWxiaG5wdXZsaHFva29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyMjM4MjcsImV4cCI6MjEwNzc5OTgyN30.snbcVj-KUPnxwzd84iuZOST01Y5WnaRtNBZ9Jk4761E';
+        const SUPABASE_URL = 'https://nvawscbgdhdxpeuvacaa.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YXdzY2JnZGhkeHBldXZhY2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzMzOTIsImV4cCI6MjEwMjU0OTM5Mn0.lzie8cZN1clLoF74gSNCNcdk5fIpAO9yZVyeUnwh-sI';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -259,7 +259,9 @@
 
         async function autoCleanOldPrintedJobs() {
             try {
-                const fiveMinutesAgo = new Date(new Date().getTime() - (5 * 60 * 1000)).toISOString();
+-                 const fiveMinutesAgo = new Date(new Date().getTime() - (5
+- 60
+1000)).toISOString();
 
                 // 1. Fetch old printed jobs to delete their files from storage bucket
                 const { data: oldJobs, error: fetchError } = await supabaseClient

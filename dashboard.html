@@ -101,7 +101,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         let shopSlug = urlParams.get('shop') || localStorage.getItem('shopSlug');
 
-        if (!shopSlug) window.location.href = 'home.html';
+        if (!shopSlug) window.location.href = 'index.html';
 
         const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const customerLink = baseUrl + 'upload.html?shop=' + shopSlug;
@@ -259,11 +259,8 @@
 
         async function autoCleanOldPrintedJobs() {
             try {
--                 const fiveMinutesAgo = new Date(new Date().getTime() - (5
-- 60
-1000)).toISOString();
+                const fiveMinutesAgo = new Date(new Date().getTime() - (5 * 60 * 1000)).toISOString();
 
-                // 1. Fetch old printed jobs to delete their files from storage bucket
                 const { data: oldJobs, error: fetchError } = await supabaseClient
                     .from('print_jobs')
                     .select('id, file_url')
@@ -285,7 +282,6 @@
                         }
                     }
 
-                    // 2. Delete records from database table
                     await supabaseClient
                         .from('print_jobs')
                         .delete()
@@ -408,7 +404,7 @@
 
         function logoutShop() {
             localStorage.clear();
-            window.location.href = 'home.html';
+            window.location.href = 'index.html';
         }
 
         fetchPrintJobs();

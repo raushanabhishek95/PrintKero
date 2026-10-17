@@ -32,7 +32,7 @@
             <button onclick="toggleQRModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
             <h3 class="text-lg font-bold mb-6">Shop QR Code</h3>
             <div id="qrcode" class="flex justify-center mb-6"></div>
-            <button onclick="printQR()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">Print Counter QR</button>
+            <button onclick="printQR()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">Print Counter Standee</button>
         </div>
     </div>
 
@@ -165,37 +165,52 @@
 
         function printQR() {
             const googleQRUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(customerLink)}`;
+            const rawShopName = localStorage.getItem('shopName') || shopSlug.split('_')[0].toUpperCase();
+            const displayShopName = rawShopName.toUpperCase();
 
-            const qrWindow = window.open('', '_blank', 'width=800,height=800');
+            const qrWindow = window.open('', '_blank', 'width=900,height=950');
             qrWindow.document.write(
                 '<html>' +
                 '<head>' +
-                '<title>PrintKaro - Shop QR Code</title>' +
+                '<title>' + displayShopName + ' - PrintKaro QR</title>' +
                 '<style>' +
-                'body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; background: #fff; }' +
-                '.container { text-align: center; padding: 40px; border: 4px dashed #2563eb; border-radius: 24px; background: #f8fafc; }' +
-                'h2 { color: #1e293b; font-size: 28px; margin-bottom: 20px; }' +
-                '.qr-box { display: inline-block; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }' +
-                '.qr-box img { display: block; width: 220px; height: 220px; }' +
-                'p { font-size: 20px; font-weight: bold; color: #2563eb; margin-top: 15px; }' +
-                '.print-btn { margin-top: 20px; padding: 14px 28px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }' +
-                '@media print { .print-btn { display: none; } }' +
+                '@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap");' +
+                'body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: "Inter", sans-serif; background: #f1f5f9; -webkit-print-color-adjust: exact; }' +
+                '.card { width: 420px; background: #ffffff; border: 3px solid #0f172a; border-radius: 28px; padding: 35px 30px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); position: relative; overflow: hidden; }' +
+                '.badge { background: #2563eb; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding: 6px 16px; border-radius: 20px; display: inline-block; margin-bottom: 12px; }' +
+                'h1 { color: #0f172a; font-size: 26px; font-weight: 900; margin: 0 0 6px 0; letter-spacing: -0.5px; }' +
+                '.subtitle { color: #64748b; font-size: 13px; font-weight: 600; margin-bottom: 24px; }' +
+                '.qr-box { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 20px; padding: 20px; display: inline-block; margin-bottom: 20px; }' +
+                '.qr-box img { display: block; width: 200px; height: 200px; }' +
+                '.instruction-box { background: #eff6ff; border-radius: 14px; padding: 12px; margin-bottom: 20px; text-align: left; }' +
+                '.instruction-box p { margin: 4px 0; font-size: 11px; font-weight: 700; color: #1e40af; display: flex; align-items: center; gap: 8px; }' +
+                '.footer-brand { font-size: 12px; font-weight: 800; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; border-top: 1px solid #f1f5f9; padding-top: 15px; }' +
+                '.footer-brand span { color: #2563eb; }' +
+                '.print-btn { margin-top: 20px; padding: 14px; width: 100%; background: #2563eb; color: white; border: none; border-radius: 14px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.4); }' +
+                '.print-btn:hover { background: #1d4ed8; }' +
+                '@media print { body { background: white; } .print-btn { display: none; } .card { border: 2px solid #000; box-shadow: none; } }' +
                 '</style>' +
                 '</head>' +
                 '<body>' +
-                '<div class="container">' +
-                '<h2>Scan to Upload & Print File</h2>' +
-                '<div class="qr-box"><img src="' + googleQRUrl + '" alt="Shop QR Code"></div>' +
-                '<p>PrintKaro Instant Printing</p>' +
-                '<button class="print-btn" onclick="window.print()">🖨️ Click Here to Print QR</button>' +
+                '<div style="text-align: center;">' +
+                '<div class="card">' +
+                '<div class="badge">⚡ Instant Wireless Printing</div>' +
+                '<h1>' + displayShopName + '</h1>' +
+                '<p class="subtitle">Scan QR code with your phone camera to send files instantly</p>' +
+                '<div class="qr-box">' +
+                '<img src="' + googleQRUrl + '" alt="Shop QR Code">' +
+                '</div>' +
+                '<div class="instruction-box">' +
+                '<p>📱 1. Scan QR code using phone camera</p>' +
+                '<p>📄 2. Select PDF or Photo & Choose B&W/Color</p>' +
+                '<p>🎫 3. Get Token & Show at Counter</p>' +
+                '</div>' +
+                '<div class="footer-brand">Powered by <span>PrintKaro</span></div>' +
+                '</div>' +
+                '<button class="print-btn" onclick="window.print()">🖨️ Print Counter Standee</button>' +
                 '</div>' +
                 '<script>' +
-                'window.onload = function() {' +
-                '    setTimeout(function() {' +
-                '        window.focus();' +
-                '        window.print();' +
-                '    }, 1000);' +
-                '};' +
+                'window.onload = function() { setTimeout(function() { window.focus(); }, 500); };' +
                 '<\/script>' +
                 '</body>' +
                 '</html>'

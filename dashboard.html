@@ -31,7 +31,7 @@
         <h1 class="text-2xl font-black tracking-tighter">Print<span class="text-blue-200">Karo</span> <span class="text-xs font-medium text-blue-100 ml-2 uppercase tracking-widest">Dashboard</span></h1>
         <div class="flex items-center gap-3">
             <a href="jukebox.html" class="text-sm font-bold flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg transition shadow">
-                <i class="fas fa-music"></i> Song
+                <i class="fas fa-music"></i> Song Mix
             </a>
             <button onclick="toggleSettingsModal()" class="text-sm font-bold flex items-center gap-1 bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-500 transition"><i class="fas fa-cog"></i> Rates</button>
             <button onclick="toggleQRModal()" class="text-sm font-bold flex items-center gap-1 bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-500 transition"><i class="fas fa-qrcode"></i> QR</button>
@@ -93,8 +93,8 @@
         </div>
 
         <div class="flex-grow">
-            <p class="text-xs font-bold text-amber-300">🎵 PrintKaro Cyber Beats</p>
-            <p id="floatingStatus" class="text-[10px] text-amber-400/80">Player Paused</p>
+            <p class="text-xs font-bold text-amber-300">🎵 PrintKaro Cyber Mix</p>
+            <p id="floatingStatus" class="text-[10px] text-amber-400/80">Mix Paused</p>
         </div>
 
         <!-- Player Controls -->
@@ -351,7 +351,7 @@
             }
         }
 
-        // Dashboard Dynamic Shuffle Music Logic
+        // Dashboard Smart Mix Player Logic
         let isPlaying = false;
         const playlistId = "RDATli";
 
@@ -365,13 +365,13 @@
                 const randomSeed = new Date().getTime();
                 container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1&t=${randomSeed}" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
                 playBtn.innerText = "⏸";
-                statusText.innerText = "Playing Retro Beats...";
+                statusText.innerText = "Playing Smart Mix...";
                 floatingVinyl.classList.remove('paused');
                 isPlaying = true;
             } else {
                 container.innerHTML = "";
                 playBtn.innerText = "▶";
-                statusText.innerText = "Player Paused";
+                statusText.innerText = "Mix Paused";
                 floatingVinyl.classList.add('paused');
                 isPlaying = false;
             }
@@ -381,11 +381,11 @@
             if (isPlaying) {
                 const container = document.getElementById('playerContainer');
                 const statusText = document.getElementById('floatingStatus');
-                statusText.innerText = "Switching Track...";
+                statusText.innerText = "Switching Mix Track...";
                 const randomSeed = new Date().getTime();
                 container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1&t=${randomSeed}" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
                 setTimeout(() => {
-                    if(isPlaying) statusText.innerText = "Playing Retro Beats...";
+                    if(isPlaying) statusText.innerText = "Playing Smart Mix...";
                 }, 1000);
             }
         }

@@ -70,21 +70,7 @@
                     <p class="text-xs text-emerald-700 font-medium mt-1">Show this token at the counter</p>
                 </div>
 
-                <!-- Adsterra Banner 300x250 Integrated Here -->
-                <div class="my-4 flex justify-center">
-                    <script type="text/javascript">
-                        atOptions = {
-                            'key' : '2a7f8caa2a02bb3f31008ff6f3cc64fe',
-                            'format' : 'iframe',
-                            'height' : 250,
-                            'width' : 300,
-                            'params' : {}
-                        };
-                    </script>
-                    <script type="text/javascript" src="https://www.highperformanceformat.com/2a7f8caa2a02bb3f31008ff6f3cc64fe/invoke.js"></script>
-                </div>
-
-                <button onclick="resetUpload()" class="mt-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">
+                <button onclick="resetUpload()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">
                     <i class="fas fa-redo mr-2"></i> Upload Another File
                 </button>
             </div>
@@ -228,7 +214,6 @@
 
                     btn.innerText = `Uploading (${i+1}/${files.length})...`;
 
-                    // Fixed back to lowercase 'print_files' bucket matching Supabase dashboard
                     const { error: uploadError } = await supabaseClient.storage.from('print_files').upload(fileName, file);
                     if (uploadError) throw new Error("Storage upload failed: " + uploadError.message);
 
@@ -259,8 +244,5 @@
             }
         }
     </script>
-
-    <!-- Adsterra Social Bar Ad Integrated Here -->
-    <script src="https://pl30904930.effectivecpmnetwork.com/fb/6a/14/fb6a14a37de6d2414bb8f16687ee901c.js"></script>
 </body>
 </html>

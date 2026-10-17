@@ -20,6 +20,10 @@
     <nav class="bg-blue-700 text-white p-4 shadow-lg flex justify-between items-center">
         <h1 class="text-2xl font-black tracking-tighter">Print<span class="text-blue-200">Karo</span> <span class="text-xs font-medium text-blue-100 ml-2 uppercase tracking-widest">Dashboard</span></h1>
         <div class="flex items-center gap-3">
+            <!-- Song Button -->
+            <a href="jukebox.html" class="text-sm font-bold flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg transition shadow">
+                <i class="fas fa-music"></i> Song
+            </a>
             <button onclick="toggleSettingsModal()" class="text-sm font-bold flex items-center gap-1 bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-500 transition"><i class="fas fa-cog"></i> Rates</button>
             <button onclick="toggleQRModal()" class="text-sm font-bold flex items-center gap-1 bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-500 transition"><i class="fas fa-qrcode"></i> QR</button>
             <button onclick="logoutShop()" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg text-xs font-bold transition">LOGOUT</button>
@@ -106,7 +110,6 @@
         const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const customerLink = baseUrl + 'upload.html?shop=' + shopSlug;
 
-        // Check if first-time login after registration to auto-open settings modal
         window.addEventListener('DOMContentLoaded', () => {
             const isFirstTime = localStorage.getItem('isFirstLogin');
             if (isFirstTime === 'true') {
@@ -172,7 +175,7 @@
             qrWindow.document.write(
                 '<html>' +
                 '<head>' +
-                '<title>' + displayShopName + ' - PrintKaro QR</title>' +
+                '<title>' + displayShopName + ' PrintKaro QR</title>' +
                 '<style>' +
                 '@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap");' +
                 'body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: "Inter", sans-serif; background: #f1f5f9; -webkit-print-color-adjust: exact; }' +

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintKaro - Songs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spinSlow 8s linear infinite;
+        }
+        .paused {
+            animation-play-state: paused;
+        }
+    </style>
+</head>
+<body class="relative w-full h-screen overflow-hidden flex flex-col items-center justify-between p-6 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop');">
+
+    <!-- Top Header with Back to Dashboard -->
+    <div class="relative w-full max-w-4xl flex items-center justify-between bg-amber-950/85 backdrop-blur-md px-6 py-4 rounded-2xl border border-amber-500/40 shadow-2xl z-10">
+        <a href="dashboard.html" class="text-amber-300 hover:text-amber-100 text-sm font-semibold flex items-center gap-2 transition">
+            ← Back to Dashboard
+        </a>
+        <h1 class="text-amber-200 font-bold text-lg tracking-wider drop-shadow">🎵 PrintKaro Cyber Songs</h1>
+    </div>
+
+    <!-- Hidden YouTube Music Audio Stream Container -->
+    <div id="playerContainer"></div>
+
+    <!-- Center Vinyl Record Player Console -->
+    <div class="relative flex flex-col items-center justify-center bg-amber-950/90 backdrop-blur-xl p-8 rounded-3xl border-2 border-amber-500/50 shadow-2xl z-10 max-w-md w-full text-center">
+
+        <!-- Spinning Vinyl Record Animation -->
+        <div class="w-36 h-36 rounded-full border-8 border-neutral-900 bg-black flex items-center justify-center mb-6 shadow-2xl relative">
+            <div class="absolute inset-2 rounded-full border border-neutral-800"></div>
+            <div class="absolute inset-6 rounded-full border border-neutral-800"></div>
+            <div id="vinylDisk" class="w-14 h-14 bg-amber-500 rounded-full border-4 border-amber-900 flex items-center justify-center text-xs font-extrabold text-black shadow-inner animate-spin-slow paused">
+                90s
+            </div>
+        </div>
+
+        <p id="statusText" class="text-amber-300 font-extrabold text-xl mb-1 tracking-wide">Player Paused</p>
+        <p class="text-amber-400/70 text-xs mb-6">Non-stop 90s Retro Beats (Ad-Free Stream)</p>
+
+        <!-- Player Controls (Prev, Play/Pause, Next) -->
+        <div class="flex items-center gap-6">
+            <button onclick="changeTrack()" class="w-12 h-12 flex items-center justify-center bg-amber-900/80 text-amber-200 rounded-full hover:bg-amber-800 active:scale-95 transition font-bold shadow-lg cursor-pointer border border-amber-600/50" title="Previous Track">
+                ⏮
+            </button>
+
+            <button onclick="togglePlay()" id="playBtn" class="w-16 h-16 flex items-center justify-center bg-amber-500 text-black rounded-full hover:bg-amber-400 active:scale-95 transition font-extrabold text-2xl shadow-xl transform hover:scale-105 cursor-pointer">
+                ▶
+            </button>
+
+            <button onclick="changeTrack()" class="w-12 h-12 flex items-center justify-center bg-amber-900/80 text-amber-200 rounded-full hover:bg-amber-800 active:scale-95 transition font-bold shadow-lg cursor-pointer border border-amber-600/50" title="Next Track">
+                ⏭
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer Branding -->
+    <div class="relative text-amber-300/70 text-xs z-10 pb-2 font-medium">
+        Powered by PrintKaro Cyber Lounge System
+    </div>
+
+    <!-- JavaScript for Playlist Streaming and Controls -->
+    <script>
+        let isPlaying = false;
+        const playlistId = "RDATli";
+
+        function togglePlay() {
+            const container = document.getElementById('playerContainer');
+            const playBtn = document.getElementById('playBtn');
+            const statusText = document.getElementById('statusText');
+            const vinylDisk = document.getElementById('vinylDisk');
+
+            if (!isPlaying) {
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
+                playBtn.innerText = "⏸";
+                statusText.innerText = "Playing Retro Beats...";
+                vinylDisk.classList.remove('paused');
+                isPlaying = true;
+            } else {
+                container.innerHTML = "";
+                playBtn.innerText = "▶";
+                statusText.innerText = "Player Paused";
+                vinylDisk.classList.add('paused');
+                isPlaying = false;
+            }
+        }
+
+        function changeTrack() {
+            if (isPlaying) {
+                const container = document.getElementById('playerContainer');
+                const statusText = document.getElementById('statusText');
+
+                statusText.innerText = "Switching Track...";
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&shuffle=1&enablejsapi=1" allow="autoplay" class="absolute opacity-0 pointer-events-none w-0 h-0 border-0"></iframe>`;
+
+                setTimeout(() => {
+                    if(isPlaying) statusText.innerText = "Playing Retro Beats...";
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
